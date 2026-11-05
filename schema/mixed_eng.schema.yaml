@@ -1,0 +1,24 @@
+# Helper schema: makes the deployer compile mixed_eng.dict.yaml, which
+# mixed_quick uses as its second (english) translator. Not for typing in.
+---
+schema:
+  schema_id: mixed_eng
+  name: Mixed English
+  version: "0.1"
+
+engine:
+  processors:
+    - speller
+    - selector
+    - express_editor
+  segmentors:
+    - abc_segmentor
+  translators:
+    - table_translator
+
+speller:
+  alphabet: zyxwvutsrqponmlkjihgfedcba
+
+translator:
+  dictionary: mixed_eng
+  enable_completion: true
