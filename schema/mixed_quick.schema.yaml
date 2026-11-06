@@ -39,6 +39,12 @@ engine:
     - table_translator
     - table_translator@english
 
+# Read by lua/mixed_paging.lua and lua/mixed_predict.lua. Change them in
+# mixed_quick.custom.yaml (see README, "Settings") rather than here.
+mixed:
+  space_pages: true             # space = next page, wraps; false: space commits
+  associated_phrases: true      # suggestions after a commit
+
 speller:
   alphabet: zyxwvutsrqponmlkjihgfedcba
   delimiter: " ;"

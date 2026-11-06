@@ -8,10 +8,13 @@
 --
 -- While suggestions are showing:
 --   1-9, = -, Page_Up/Down         pick / page, as usual
---   space                          next page, wraps (mixed_paging.lua)
+--   space                          next page, wraps (mixed_paging.lua); with
+--                                  mixed/space_pages: false, as Return
 --   a letter                       starts normal input (suggestions go)
 --   Escape, BackSpace              dismiss only
 --   Return                         dismiss, and the key reaches the app
+--
+-- Off with mixed/associated_phrases: false.
 --
 -- Same technique as librime-predict: a (0, 0) segment tagged "prediction"
 -- carrying its own menu, added after the engine has recomposed.
@@ -92,6 +95,10 @@ end
 local P = {}
 
 function P.init(env)
+	env.enabled = env.engine.schema.config:get_bool("mixed/associated_phrases") ~= false
+	if not env.enabled then
+		return
+	end
 	if not db then
 		db = load_db()
 	end
@@ -115,13 +122,15 @@ function P.init(env)
 end
 
 function P.fini(env)
-	env.commit_conn:disconnect()
-	env.update_conn:disconnect()
+	if env.enabled then
+		env.commit_conn:disconnect()
+		env.update_conn:disconnect()
+	end
 end
 
 function P.func(key, env)
 	local ctx = env.engine.context
-	if key:release() or not showing(ctx) then
+	if not env.enabled or key:release() or not showing(ctx) then
 		return kNoop
 	end
 	local name = key:repr()
@@ -130,7 +139,8 @@ function P.func(key, env)
 		ctx:clear()
 		return kAccepted
 	end
-	if name == "Return" then
+	-- space only gets here when mixed_paging is off
+	if name == "space" or name == "Return" then
 		env.key = nil
 		ctx:clear()
 		return kRejected                -- let the app have the key

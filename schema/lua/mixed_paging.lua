@@ -5,17 +5,22 @@
 --
 -- Rime's key_binder can send Page_Down for space but cannot tell when it is
 -- on the last page, hence a processor.
+--
+-- Off with mixed/space_pages: false in the schema (or a .custom.yaml patch);
+-- space then commits the first candidate, as in Cangjie.
 
 local kRejected, kAccepted, kNoop = 0, 1, 2
 
 local P = {}
 
 function P.init(env)
+	local config = env.engine.schema.config
 	env.page_size = env.engine.schema.page_size
+	env.enabled = config:get_bool("mixed/space_pages") ~= false   -- default on
 end
 
 function P.func(key, env)
-	if key:release() or key:repr() ~= "space" then
+	if not env.enabled or key:release() or key:repr() ~= "space" then
 		return kNoop
 	end
 	local ctx = env.engine.context

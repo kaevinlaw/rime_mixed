@@ -7,10 +7,11 @@ DEFAULT_SRC="$HERE/../Mixed-Chinese-Keyboard-Plus-Dicts/v2.1"
 OUT="$HERE/rime"
 MODE=prebuilt
 SRC=""
+SPACE_COMMITS=0
 
 usage() {
   cat <<USAGE
-Usage: $(basename "$0") [--prebuilt | --rebuild | --src DIR] [--out DIR]
+Usage: $(basename "$0") [--prebuilt | --rebuild | --src DIR] [--out DIR] [--space-commits]
        $(basename "$0") --update-prebuilt [--src DIR]
 
   --prebuilt         use the dictionaries in prebuilt/ (default)
@@ -19,6 +20,8 @@ Usage: $(basename "$0") [--prebuilt | --rebuild | --src DIR] [--out DIR]
   --src DIR          regenerate them from DIR, a folder of .ms2 files
                      (e.g. .../Mixed-Chinese-Keyboard-Plus-Dicts/v2)
   --out DIR          where to put the result (default: ./rime)
+  --space-commits    space commits the first candidate (Cangjie habit)
+                     instead of paging; sets mixed/space_pages: false
   --update-prebuilt  regenerate prebuilt/ itself (for committing)
 
 The output folder holds everything Rime needs. Copy it into your Rime user
@@ -43,6 +46,7 @@ while [ $# -gt 0 ]; do
     --src)             MODE=${MODE/prebuilt/rebuild}; SRC="${2:?--src needs a folder}"; shift ;;
     --out)             OUT="${2:?--out needs a folder}"; shift ;;
     --update-prebuilt) MODE=update ;;
+    --space-commits)   SPACE_COMMITS=1 ;;
     -h|--help)         usage; exit 0 ;;
     *)                 usage >&2; exit 2 ;;
   esac
@@ -82,6 +86,12 @@ fi
 
 mkdir -p "$OUT"
 cp -r "$HERE/schema/." "$OUT/"
+if [ "$SPACE_COMMITS" = 1 ]; then
+  sed -i 's/^\(  space_pages:\) true /\1 false/' "$OUT/mixed_quick.schema.yaml"
+  grep -q '^  space_pages: false' "$OUT/mixed_quick.schema.yaml" \
+    || { echo "could not set space_pages in $OUT/mixed_quick.schema.yaml" >&2; exit 1; }
+  echo "space: commits the first candidate"
+fi
 if [ "$MODE" = prebuilt ]; then
   cp "$HERE"/prebuilt/*.dict.yaml "$HERE"/prebuilt/*.txt "$OUT/"
   echo "dictionaries: prebuilt/ ($(sed -n 's/^  folder: //p' "$HERE/prebuilt/SOURCE" 2>/dev/null))"

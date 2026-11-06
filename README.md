@@ -36,7 +36,12 @@ Squirrel (macOS). Needs librime-lua for the last two items (Debian/Ubuntu:
 ./build.sh --src DIR          # regenerate from another folder of .ms2 files, e.g. .../v2
 ./build.sh --out DIR          # write somewhere other than ./rime
 ./build.sh --update-prebuilt  # refresh prebuilt/ (then commit it)
+./build.sh --space-commits    # space commits the first candidate instead of paging
 ```
+
+`--space-commits` is for people used to Cangjie, where code + space types the
+character. It only flips `mixed/space_pages` in the built schema; the same
+can be done after installing, see [Settings](#settings).
 
 `--rebuild` expects the dictionary repo next to this one:
 
@@ -92,15 +97,86 @@ Each step prints the commit, the input and the candidate page (`page 2/3:`).
 
 ## Keys
 
-| key                | typing                     | associated phrases          |
-|--------------------|----------------------------|-----------------------------|
-| 1-9                | pick                       | pick, then chain            |
-| space              | next page, wraps           | next page, wraps            |
-| `-` `=` PgUp PgDn  | page                       | page                        |
-| Esc                | clear input                | dismiss                     |
-| BackSpace          | delete a letter            | dismiss                     |
-| Return             | commit the letters         | dismiss, Return reaches the app |
-| a letter           | type                       | dismiss, start typing       |
+| key                  | typing                     | associated phrases          |
+|----------------------|----------------------------|-----------------------------|
+| 1-9                  | pick                       | pick, then chain            |
+| space                | next page, wraps (*)       | next page, wraps (*)        |
+| `-` `=` `,` `.` PgUp PgDn | page                  | page                        |
+| Esc                  | clear input                | dismiss                     |
+| BackSpace            | delete a letter            | dismiss                     |
+| Return               | commit the letters         | dismiss, Return reaches the app |
+| a letter             | type                       | dismiss, start typing       |
+
+(*) With `space_pages: false`: space commits the first candidate, and on
+associated phrases it dismisses them and types a space.
+
+`.` pages forward while candidates are showing and `,` pages back from page 2;
+otherwise they type `，` `。` as usual. These come from Rime's `default.yaml`.
+
+## Settings
+
+Change behaviour with a `mixed_quick.custom.yaml` next to the schema in your
+Rime folder, then Deploy. `build.sh` never writes this file, so it survives
+rebuilds and copies. All keys go under one `patch:`:
+
+```yaml
+# mixed_quick.custom.yaml
+patch:
+  # space commits the first candidate (default true: space = next page, wraps)
+  mixed/space_pages: false
+
+  # no suggestions after a commit
+  mixed/associated_phrases: false
+
+  # candidates per page (default 9; also set in default.custom.yaml for all schemas)
+  menu/page_size: 6
+
+  # only exact codes: typing "hq" no longer lists 我 (hqi) and longer words
+  translator/enable_completion: false
+
+  # keep completion but hide the "~xx" hint showing the rest of the code
+  translator/comment_format:
+    - xform/^~.*$//
+
+  # stop learning: candidates stay in the dictionary's order
+  translator/enable_user_dict: false
+
+  # more keys; appended to the defaults
+  key_binder/bindings/+:
+    - { when: paging,   accept: bracketleft,  send: Page_Up }    # [ previous page
+    - { when: has_menu, accept: bracketright, send: Page_Down }  # ] next page
+    - { when: has_menu, accept: semicolon,    send: 2 }          # ; second candidate
+    - { when: has_menu, accept: apostrophe,   send: 3 }          # ' third candidate
+```
+
+`;` is also Rime's code delimiter; with the binding above it picks the second
+candidate whenever candidates are showing.
+
+### Suggested sets
+
+**Quick (速成) users**, close to the Android app: the defaults. Optionally hide
+the completion hints:
+
+```yaml
+patch:
+  translator/comment_format:
+    - xform/^~.*$//
+```
+
+**Cangjie (倉頡) users**: the dictionary already holds full Cangjie codes
+(我 `hqi`, 時 `agdi`) ranked first, so type as usual. Space commits, and only
+exact codes are listed:
+
+```yaml
+patch:
+  mixed/space_pages: false
+  translator/enable_completion: false
+```
+
+Quick codes stay in the dictionary; a 1-2 letter code still lists the Quick
+characters for it after the Cangjie ones (`ab`: 明 first, then 閒 晴 …). Rare
+characters with a 1-2 letter Cangjie code can be on a later page; picking one
+once moves it forward.
 
 ## Source format
 
