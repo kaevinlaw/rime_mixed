@@ -1,0 +1,68 @@
+# Trime (Android) on-screen keyboard for the mixed_quick schema.
+# Trime uses the keyboard named after the schema. This is Trime 3.3's
+# "qwerty" (預設26鍵) with, on each letter key:
+#   top      the long-press symbol, as in qwerty (! @ # ...)
+#   middle   the Cangjie radical in Chinese mode, the letter in English
+#            mode (Trime shows a key's label only in Chinese mode)
+#   bottom   the letter (hint)
+# key_text_size sets the middle; symbol_text_size sets top and bottom
+# together (Trime 3.3 has one size for both). Keys are 60 high, not 55,
+# to fit three rows of text. Long press , . types ， 。.
+#
+# Copy into the Trime user folder next to the schema, then
+# Profile -> Sync user data. Replaces any trime.custom.yaml you have.
+patch:
+  preset_keyboards/mixed_quick:
+      name: 混合速成
+      author: "kaevinlaw <kaevinlaw@gmail.com>"
+      ascii_mode: 0
+      columns: 10 #鍵盤列數，超過則自動換行，默認30列
+      width: 10
+      height: 60
+      lock: true
+      key_symbol_offset_x: 0
+      key_symbol_offset_y: 0
+      key_text_offset_x: 0
+      key_text_offset_y: 0
+      key_hint_offset_x: 0
+      key_hint_offset_y: 0
+      key_press_offset_x: 2
+      key_press_offset_y: 2
+      keys:
+      - {click: 'q', label: '手', hint: 'q', key_text_size: 18, symbol_text_size: 18, long_click: '!', swipe_up: 1}
+      - {click: 'w', label: '田', hint: 'w', key_text_size: 18, symbol_text_size: 18, long_click: '@', swipe_up: 2}
+      - {click: 'e', label: '水', hint: 'e', key_text_size: 18, symbol_text_size: 18, long_click: '#', swipe_up: 3}
+      - {click: 'r', label: '口', hint: 'r', key_text_size: 18, symbol_text_size: 18, long_click: '$', swipe_up: 4}
+      - {click: 't', label: '廿', hint: 't', key_text_size: 18, symbol_text_size: 18, long_click: '%', swipe_up: 5}
+      - {click: 'y', label: '卜', hint: 'y', key_text_size: 18, symbol_text_size: 18, long_click: '^', swipe_up: 6}
+      - {click: 'u', label: '山', hint: 'u', key_text_size: 18, symbol_text_size: 18, long_click: '&', swipe_up: 7}
+      - {click: 'i', label: '戈', hint: 'i', key_text_size: 18, symbol_text_size: 18, long_click: '*', swipe_up: 8}
+      - {click: 'o', label: '人', hint: 'o', key_text_size: 18, symbol_text_size: 18, long_click: '(){Left}', swipe_up: 9}
+      - {click: 'p', label: '心', hint: 'p', key_text_size: 18, symbol_text_size: 18, long_click: 'Hide', swipe_up: 0}
+      - {width: 5}
+      - {click: 'a', label: '日', hint: 'a', key_text_size: 18, symbol_text_size: 18, long_click: select_all, swipe_left: Left, swipe_right: Right, swipe_up: Up, swipe_down: Down}
+      - {click: 's', label: '尸', hint: 's', key_text_size: 18, symbol_text_size: 18, long_click: '~', swipe_left: Home, swipe_right: End, swipe_up: Page_Up, swipe_down: Page_Down}
+      - {click: 'd', label: '木', hint: 'd', key_text_size: 18, symbol_text_size: 18, long_click: '-', swipe_down: '_'}
+      - {click: 'f', label: '火', hint: 'f', key_text_size: 18, symbol_text_size: 18, long_click: '+', swipe_down: '='}
+      - {click: 'g', label: '土', hint: 'g', key_text_size: 18, symbol_text_size: 18, long_click: '\', swipe_down: '|'}
+      - {click: 'h', label: '竹', hint: 'h', key_text_size: 18, symbol_text_size: 18, long_click: '[]{Left}', swipe_left: '[', swipe_right: ']'}
+      - {click: 'j', label: '十', hint: 'j', key_text_size: 18, symbol_text_size: 18, long_click: '{}{Left}', swipe_left: '{', swipe_right: '}'}
+      - {click: 'k', label: '大', hint: 'k', key_text_size: 18, symbol_text_size: 18, long_click: ':'}
+      - {click: 'l', label: '中', hint: 'l', key_text_size: 18, symbol_text_size: 18, long_click: ';'}
+      - {width: 5}
+      - {click: Shift_L, send_bindings: false, width: 15}
+      - {click: 'z', label: '重', hint: 'z', key_text_size: 18, symbol_text_size: 18, long_click: '`'}
+      - {click: 'x', label: '難', hint: 'x', key_text_size: 18, symbol_text_size: 18, long_click: cut}
+      - {click: 'c', label: '金', hint: 'c', key_text_size: 18, symbol_text_size: 18, long_click: copy}
+      - {click: 'v', label: '女', hint: 'v', key_text_size: 18, symbol_text_size: 18, long_click: paste}
+      - {click: 'b', label: '月', hint: 'b', key_text_size: 18, symbol_text_size: 18, long_click: Time, swipe_up: Date}
+      - {click: 'n', label: '弓', hint: 'n', key_text_size: 18, symbol_text_size: 18, long_click: '"'}
+      - {click: 'm', label: '一', hint: 'm', key_text_size: 18, symbol_text_size: 18, long_click: "'"}
+      - {click: BackSpace, swipe_left: Escape, width: 15}
+      - {click: Mode_switch, long_click: Menu, width: 15}
+      - {click: Keyboard_symbols, long_click: Keyboard_number}
+      - {click: ',', long_click: '，'}     # long press: full width
+      - {click: space, width: 30}
+      - {click: '.', long_click: '。'}     # long press: full width
+      - {click: '/', long_click: '?'}
+      - {click: Return, composing: Return1, long_click: CommitComment, width: 15}

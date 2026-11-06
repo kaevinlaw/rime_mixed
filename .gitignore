@@ -1,3 +1,4 @@
 # build output; also the Rime user folder of the docker tester
 /rime/
 __pycache__/
+/rime_android/

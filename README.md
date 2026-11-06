@@ -28,6 +28,7 @@ Squirrel (macOS). Needs librime-lua for the last two items (Debian/Ubuntu:
 | `prebuilt/` | generated dictionaries, so no source repo is needed; `SOURCE` says which commit |
 | `rime/`     | build output (not tracked)                                |
 | `test/`     | Docker console to try the schema without an input method  |
+| `extra/trime/` | on-screen keyboard for Trime (Android), copied by hand |
 
 ## Build
 
@@ -87,6 +88,36 @@ Regenerating needs only Python 3 and takes a few seconds.
 
 Copying again later only replaces these files. Learned words (`*.userdb`)
 are kept.
+
+### Android (Trime)
+
+Tested with [Trime](https://github.com/osfans/trime) 3.3 (同文輸入法, GPL-3.0;
+F-Droid, GitHub or Play Store), which includes librime-lua.
+
+```bash
+./build.sh --space raw --out rime_android
+cp extra/trime/trime.custom.yaml rime_android/
+```
+
+1. In Trime, Profile: data storage *sync from external storage*, user
+   directory e.g. `trime` (`Internal storage/trime/`).
+2. Copy the contents of `rime_android/` there (USB file transfer, or
+   `adb push rime_android/. /sdcard/trime/`).
+3. Profile → **Sync user data immediately**: copies the folder into the app
+   and deploys (there is no separate Deploy button). The first deploy takes
+   a few minutes.
+4. After changing a `lua/` script, also force stop Trime (Android Settings →
+   Apps → Trime): the scripts stay loaded until the app restarts.
+
+`trime.custom.yaml` adds a keyboard named after the schema, which Trime uses
+for it: the 26-key qwerty layout where each letter key shows its long-press
+symbol on top, the Cangjie radical in the middle (the letter in English
+mode) and the letter at the bottom; long press `,` `.` for `，` `。`. It
+replaces any `trime.custom.yaml` you already have; merge by hand if so.
+Trime rewrites `default.custom.yaml` when you pick schemas in its settings.
+
+The candidate bar scrolls sideways and takes taps, so `raw` space mode suits
+it: space and punctuation type what you typed, tap to pick Chinese.
 
 ## Test without installing
 
