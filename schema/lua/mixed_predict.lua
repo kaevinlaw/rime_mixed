@@ -9,7 +9,7 @@
 -- While suggestions are showing:
 --   1-9, = -, Page_Up/Down         pick / page, as usual
 --   space                          next page, wraps (mixed_paging.lua); with
---                                  mixed/space_pages: false, as Return
+--                                  mixed/space: first or raw, as Return
 --   a letter                       starts normal input (suggestions go)
 --   Escape, BackSpace              dismiss only
 --   Return                         dismiss, and the key reaches the app
@@ -139,7 +139,7 @@ function P.func(key, env)
 		ctx:clear()
 		return kAccepted
 	end
-	-- space only gets here when mixed_paging is off
+	-- space only gets here with mixed/space: first or raw
 	if name == "space" or name == "Return" then
 		env.key = nil
 		ctx:clear()

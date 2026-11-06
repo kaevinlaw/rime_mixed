@@ -18,7 +18,7 @@ switches:
 
 engine:
   processors:
-    - lua_processor@*mixed_paging    # space = next page, wraps; lua/mixed_paging.lua
+    - lua_processor@*mixed_paging    # space, see mixed/space; lua/mixed_paging.lua
     - lua_processor@*mixed_predict   # associated phrases, lua/mixed_predict.lua
     - ascii_composer
     - recognizer
@@ -42,7 +42,8 @@ engine:
 # Read by lua/mixed_paging.lua and lua/mixed_predict.lua. Change them in
 # mixed_quick.custom.yaml (see README, "Settings") rather than here.
 mixed:
-  space_pages: true             # space = next page, wraps; false: space commits
+  space: page                   # page: next page, wraps; first: commit the
+                                # first candidate; raw: commit the letters + space
   associated_phrases: true      # suggestions after a commit
 
 speller:

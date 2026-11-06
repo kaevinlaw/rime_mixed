@@ -11,7 +11,8 @@ app's behaviour on a desktop:
   the rest of the code)
 - English words give Chinese: `background` → 背景
 - associated phrases after a commit: 我 → 的 人 會 …, chaining 我 → 不 → 能
-- space pages forward and wraps to page 1; pick with 1-9
+- space pages forward and wraps to page 1; pick with 1-9 (or: space commits
+  the first candidate, or types the letters as English, see Settings)
 
 Works with any Rime frontend: fcitx5-rime, ibus-rime, Weasel (Windows),
 Squirrel (macOS). Needs librime-lua for the last two items (Debian/Ubuntu:
@@ -36,12 +37,21 @@ Squirrel (macOS). Needs librime-lua for the last two items (Debian/Ubuntu:
 ./build.sh --src DIR          # regenerate from another folder of .ms2 files, e.g. .../v2
 ./build.sh --out DIR          # write somewhere other than ./rime
 ./build.sh --update-prebuilt  # refresh prebuilt/ (then commit it)
-./build.sh --space-commits    # space commits the first candidate instead of paging
+./build.sh --space first      # space commits the first candidate (or --space-commits)
+./build.sh --space raw        # space types the letters + a space (phones)
 ```
 
-`--space-commits` is for people used to Cangjie, where code + space types the
-character. It only flips `mixed/space_pages` in the built schema; the same
-can be done after installing, see [Settings](#settings).
+`--space` sets `mixed/space` in the built schema; the same can be done after
+installing, see [Settings](#settings):
+
+| mode    | space while typing                      | for                       |
+|---------|-----------------------------------------|---------------------------|
+| `page`  | next page, wraps to page 1 (default)    | Quick users with a keyboard |
+| `first` | commits the first candidate             | Cangjie habits            |
+| `raw`   | commits the letters you typed + a space | touch keyboards: tap Chinese in the candidate bar, space types English |
+
+In `raw` mode punctuation is ASCII unless the character right before it is
+Chinese: `hello` + `,` → `hello,`, 我 + `,` → 我，, `我 ` + `,` → `我 ,`.
 
 `--rebuild` expects the dictionary repo next to this one:
 
@@ -107,8 +117,9 @@ Each step prints the commit, the input and the candidate page (`page 2/3:`).
 | Return               | commit the letters         | dismiss, Return reaches the app |
 | a letter             | type                       | dismiss, start typing       |
 
-(*) With `space_pages: false`: space commits the first candidate, and on
-associated phrases it dismisses them and types a space.
+(*) With `mixed/space: first` space commits the first candidate; with `raw`
+it commits the typed letters and a space. With either, space on associated
+phrases dismisses them and types a space.
 
 `.` pages forward while candidates are showing and `,` pages back from page 2;
 otherwise they type `，` `。` as usual. These come from Rime's `default.yaml`.
@@ -122,8 +133,9 @@ rebuilds and copies. All keys go under one `patch:`:
 ```yaml
 # mixed_quick.custom.yaml
 patch:
-  # space commits the first candidate (default true: space = next page, wraps)
-  mixed/space_pages: false
+  # what space does while typing: page (default; next page, wraps),
+  # first (commit the first candidate) or raw (commit the letters + a space)
+  mixed/space: first
 
   # no suggestions after a commit
   mixed/associated_phrases: false
@@ -169,7 +181,7 @@ exact codes are listed:
 
 ```yaml
 patch:
-  mixed/space_pages: false
+  mixed/space: first
   translator/enable_completion: false
 ```
 
@@ -177,6 +189,15 @@ Quick codes stay in the dictionary; a 1-2 letter code still lists the Quick
 characters for it after the Cangjie ones (`ab`: 明 first, then 閒 晴 …). Rare
 characters with a 1-2 letter Cangjie code can be on a later page; picking one
 once moves it forward.
+
+**Phone (Trime, fcitx5-android)**: no comfortable space-to-page, and the
+candidate bar scrolls and takes taps. Space types what you typed, so English
+needs no mode switch:
+
+```yaml
+patch:
+  mixed/space: raw
+```
 
 ## Source format
 
