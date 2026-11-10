@@ -184,6 +184,9 @@ patch:
   # stop learning: candidates stay in the dictionary's order
   translator/enable_user_dict: false
 
+  # input line without the Cangjie radicals: "hqi" instead of "hqi 竹手戈"
+  translator/preedit_format: []
+
   # more keys; appended to the defaults
   key_binder/bindings/+:
     - { when: paging,   accept: bracketleft,  send: Page_Up }    # [ previous page

@@ -60,6 +60,12 @@ translator:
   enable_encoder: false
   encode_commit_history: false
   initial_quality: 1
+  # input line shows the radicals after the letters: "hqi 竹手戈"
+  # (off: translator/preedit_format: [] in mixed_quick.custom.yaml)
+  preedit_format:
+    - 'xform/^([a-z]+)$/\U$1\E $1/'
+    - xlit/abcdefghijklmnopqrstuvwxyz/日月金木水火土竹戈十大中一弓人心手口尸廿山女田難卜重/
+    - 'xform/([A-Z]+)/\L$1/'
 
 # English words: mixed_eng.dict.yaml, ranked below Chinese
 english:
