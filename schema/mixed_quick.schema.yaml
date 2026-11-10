@@ -38,13 +38,16 @@ engine:
     - punct_translator
     - table_translator
     - table_translator@english
+  filters:
+    - lua_filter@*mixed_radicals     # Cangjie radicals as a candidate; lua/mixed_radicals.lua
 
-# Read by lua/mixed_paging.lua and lua/mixed_predict.lua. Change them in
-# mixed_quick.custom.yaml (see README, "Settings") rather than here.
+# Read by lua/mixed_paging.lua, mixed_predict.lua and mixed_radicals.lua.
+# Change them in mixed_quick.custom.yaml (see README, "Settings"), not here.
 mixed:
   space: page                   # page: next page, wraps; first: commit the
                                 # first candidate; raw: commit the letters + space
   associated_phrases: true      # suggestions after a commit
+  radical_candidate: 1          # position of the radicals candidate (hqi: 竹手戈); 0 = off
 
 speller:
   alphabet: zyxwvutsrqponmlkjihgfedcba

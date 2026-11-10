@@ -171,6 +171,10 @@ patch:
   # no suggestions after a commit
   mixed/associated_phrases: false
 
+  # the radicals of the typed letters as a candidate ("mm": 一一, "hqi": 竹手戈):
+  # its place in the list, 1 = first (default), 2 = second ...; 0 = off
+  mixed/radical_candidate: 2
+
   # candidates per page (default 9; also set in default.custom.yaml for all schemas)
   menu/page_size: 6
 
@@ -217,6 +221,7 @@ exact codes are listed:
 patch:
   mixed/space: first
   translator/enable_completion: false
+  mixed/radical_candidate: 2      # else space commits 竹手戈 for hqi
 ```
 
 Quick codes stay in the dictionary; a 1-2 letter code still lists the Quick
