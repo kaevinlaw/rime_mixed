@@ -13,7 +13,8 @@
 --          candidate bar; suits touch keyboards.
 --          Punctuation is ASCII unless the character before it is Chinese:
 --          "hello" + "," gives "hello,", 我 + "," gives 我，, "我 " + ","
---          gives "我 ,". At the start (nothing typed yet) it is ASCII.
+--          gives "我 ,", 我 + "2" + "," gives 我2,. At the start (nothing
+--          typed yet) it is ASCII.
 --          Typing a full-width mark directly (e.g. a key that sends ，)
 --          is left alone.
 --
@@ -108,9 +109,10 @@ function P.func(key, env)
 	local ctx = env.engine.context
 	if env.mode == "raw" and not ctx:get_option("ascii_mode") then
 		local name = key:repr()
-		if ctx.input == "" and (name == "space" or name == "Return") then
+		if ctx.input == "" and (name == "space" or name == "Return")
+				or ctx.composition:empty() and name:match("^%d$") then
 			env.last_chinese = false    -- it reaches the app as is
-		end
+		end                             -- (a digit on associated phrases picks)
 		local ch = punctuation(key)
 		if ch then
 			if ctx.input ~= "" then
