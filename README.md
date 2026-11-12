@@ -10,7 +10,8 @@ app's behaviour on a desktop:
 - prefix completion: `bac` also lists `back*`, `background` ... (`~~xx` shows
   the rest of the code)
 - English words give Chinese: `background` → 背景
-- associated phrases after a commit: 我 → 的 人 會 …, chaining 我 → 不 → 能
+- associated phrases after a commit: 我 → 的 人 會 …, chaining 我 → 不 → 能;
+  what you write after a character comes first next time (我 們 → 們 first)
 - space pages forward and wraps to page 1; pick with 1-9 (or: space commits
   the first candidate, or types the letters as English, see Settings)
 
@@ -87,7 +88,7 @@ Regenerating needs only Python 3 and takes a few seconds.
    the tray menu. The first deploy compiles 1.4 M entries and can take a minute.
 
 Copying again later only replaces these files. Learned words (`*.userdb`)
-are kept.
+and learned associated phrases (`mixed_predict.user.txt`) are kept.
 
 ### Android (Trime)
 
@@ -130,7 +131,8 @@ Nothing on the host's input method is touched.
 test/run.sh build                  # once
 test/run.sh test                   # interactive: type hi, 1, {space}, {Escape} ...
 test/run.sh test qi 1 {space}      # one key sequence per argument
-test/run.sh reset-learning         # forget what was learned (deletes rime/*.userdb)
+test/run.sh reset-learning         # forget what was learned (rime/*.userdb,
+                                   # rime/mixed_predict.user.txt)
 ```
 
 Each step prints the commit, the input and the candidate page (`page 2/3:`).
@@ -168,7 +170,7 @@ patch:
   # first (commit the first candidate) or raw (commit the letters + a space)
   mixed/space: first
 
-  # no suggestions after a commit
+  # no suggestions after a commit (and no learning of them)
   mixed/associated_phrases: false
 
   # the radicals of the typed letters as a candidate ("mm": 一一, "hqi": 竹手戈):

@@ -67,8 +67,10 @@ local function ends_chinese(text)
 	end
 end
 
+-- commit_text skips the commit notifier, so tell mixed_predict.lua too
 local function commit(env, text)
 	env.engine:commit_text(text)
+	env.engine.context:set_property("mixed_before", text)
 	local cjk = ends_chinese(text)
 	if cjk ~= nil then
 		env.last_chinese = cjk

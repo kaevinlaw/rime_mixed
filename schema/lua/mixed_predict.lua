@@ -6,6 +6,19 @@
 -- 我 -> 不 -> 能 offers 忘記你 (key 我不能). If the whole text has no entry,
 -- its tail is tried: 我不能 -> 不能 -> 能.
 --
+-- Learning, as the app's "related words": whenever Chinese is committed
+-- right after Chinese, the pair (last character before, committed word) is
+-- counted, however the word was typed: 我 then 們 counts 我 -> 們. After a
+-- commit, up to LEARNED_SHOWN learned words for its last character come
+-- first, most used first (ties: most recent), then the built-in list.
+-- Pairs not used for EXPIRE_DAYS days are forgotten. Stored in
+-- mixed_predict.user.txt in the user folder (one line per change, compacted
+-- on load); delete it to start over. Not part of Rime's sync.
+--
+-- A key that reaches the app (space, Return, a digit, arrows ...) breaks
+-- the pair: 我 space 們 is not counted. mixed_paging.lua commits ASCII
+-- itself and says so through the context property "mixed_before".
+--
 -- While suggestions are showing:
 --   1-9, = -, Page_Up/Down         pick / page, as usual
 --   space                          next page, wraps (mixed_paging.lua); with
@@ -14,14 +27,20 @@
 --   Escape, BackSpace              dismiss only
 --   Return                         dismiss, and the key reaches the app
 --
--- Off with mixed/associated_phrases: false.
+-- Off with mixed/associated_phrases: false (no learning either).
 --
 -- Same technique as librime-predict: a (0, 0) segment tagged "prediction"
 -- carrying its own menu, added after the engine has recomposed.
 
 local kRejected, kAccepted, kNoop = 0, 1, 2
 
-local db                                -- shared by all sessions
+local LEARNED_SHOWN = 5                 -- the app's default
+local EXPIRE_DAYS = 30                  -- the app's default: 1 month
+local MAX_WORD = 8                      -- longer commits are not learned
+
+local db                                -- built-in, shared by all sessions
+local learned                           -- learned[parent][child] = {count, last}
+local user_path
 
 local function load_db()
 	local t = {}
@@ -43,6 +62,109 @@ local function load_db()
 	end
 	f:close()
 	return t
+end
+
+-- Read the learned pairs (later lines win), drop expired ones and write
+-- the file back with one line per pair.
+local function load_learned()
+	local t = {}
+	user_path = rime_api.get_user_data_dir() .. "/mixed_predict.user.txt"
+	local f = io.open(user_path, "r")
+	if not f then
+		return t
+	end
+	local oldest = os.time() - EXPIRE_DAYS * 86400
+	for line in f:lines() do
+		local parent, child, count, last =
+			line:match("^([^\t]+)\t([^\t]+)\t(%d+)\t(%d+)$")
+		if parent then
+			t[parent] = t[parent] or {}
+			t[parent][child] = { tonumber(count), tonumber(last) }
+		end
+	end
+	f:close()
+	local lines = {}
+	for parent, children in pairs(t) do
+		for child, e in pairs(children) do
+			if e[2] < oldest then
+				children[child] = nil
+			else
+				lines[#lines + 1] = table.concat({ parent, child, e[1], e[2] }, "\t")
+			end
+		end
+	end
+	f = io.open(user_path, "w")
+	if f then
+		f:write(table.concat(lines, "\n"), #lines > 0 and "\n" or "")
+		f:close()
+	end
+	return t
+end
+
+local function is_han(c)
+	return c >= 0x3400 and c <= 0x9FFF or c >= 0xF900 and c <= 0xFAFF
+		or c >= 0x20000 and c <= 0x3FFFF
+end
+
+-- last character of text if it is Chinese, else nil
+local function han_tail(text)
+	local last
+	for _, c in utf8.codes(text) do
+		last = c
+	end
+	if last and is_han(last) then
+		return utf8.char(last)
+	end
+end
+
+-- whole text Chinese and short enough to learn
+local function han_word(text)
+	local n = 0
+	for _, c in utf8.codes(text) do
+		if not is_han(c) then
+			return false
+		end
+		n = n + 1
+	end
+	return n > 0 and n <= MAX_WORD
+end
+
+local function learn(parent, child)
+	learned[parent] = learned[parent] or {}
+	local e = learned[parent][child] or { 0, 0 }
+	e[1], e[2] = e[1] + 1, os.time()
+	learned[parent][child] = e
+	local f = io.open(user_path, "a")
+	if f then
+		f:write(table.concat({ parent, child, e[1], e[2] }, "\t"), "\n")
+		f:close()
+	end
+end
+
+-- up to LEARNED_SHOWN learned words after parent, most used first
+local function learned_words(parent)
+	local children = parent and learned[parent]
+	if not children then
+		return {}
+	end
+	local oldest = os.time() - EXPIRE_DAYS * 86400
+	local list = {}
+	for child, e in pairs(children) do
+		if e[2] >= oldest then
+			list[#list + 1] = { child, e[1], e[2] }
+		end
+	end
+	table.sort(list, function(a, b)
+		if a[2] ~= b[2] then
+			return a[2] > b[2]
+		end
+		return a[3] > b[3]
+	end)
+	local words = {}
+	for i = 1, math.min(#list, LEARNED_SHOWN) do
+		words[i] = list[i][1]
+	end
+	return words
 end
 
 -- Longest tail of text that has an entry: 我不能, 不能, 能.
@@ -74,13 +196,22 @@ local function show(env, ctx)
 	if not text or ctx.input ~= "" or not ctx.composition:empty() then
 		return
 	end
+	local tail = han_tail(text)
+	local mine = learned_words(tail)
 	local key, words = lookup(text)
-	if not key then
+	if not key and #mine == 0 then
 		return
 	end
 	local translation = Translation(function()
-		for _, w in ipairs(words) do
+		local seen = {}
+		for _, w in ipairs(mine) do
+			seen[w] = true
 			yield(Candidate("prediction", 0, 0, w, ""))
+		end
+		for _, w in ipairs(words or {}) do
+			if not seen[w] then
+				yield(Candidate("prediction", 0, 0, w, ""))
+			end
 		end
 	end)
 	local menu = Menu()
@@ -89,7 +220,7 @@ local function show(env, ctx)
 	seg.tags = Set({ "prediction", "placeholder" })
 	seg.menu = menu
 	ctx.composition:push_back(seg)
-	env.key = key
+	env.key = key or tail
 end
 
 local P = {}
@@ -102,12 +233,23 @@ function P.init(env)
 	if not db then
 		db = load_db()
 	end
+	if not learned then
+		learned = load_learned()
+	end
 	local ctx = env.engine.context
 	env.commit_conn = ctx.commit_notifier:connect(function(c)
 		local text = c:get_commit_text()
 		if text == "" then
 			return
 		end
+		-- the radicals candidate (mixed_radicals.lua) is not a word
+		local cand = c:get_selected_candidate()
+		local real = not (cand and cand.type == "radicals")
+		local parent = han_tail(c:get_property("mixed_before"))
+		if real and parent and han_word(text) then
+			learn(parent, text)
+		end
+		c:set_property("mixed_before", real and text or "")
 		-- a picked suggestion continues the chain: 我 + 不 -> 我不
 		if env.key and showing(c) then
 			env.pending = env.key .. text
@@ -128,9 +270,28 @@ function P.fini(env)
 	end
 end
 
+-- a key that types into the app itself, past Rime: breaks a learned pair.
+-- Letters start input, modifiers alone do nothing.
+local function reaches_app(key)
+	local code = key.keycode
+	if code >= 0xffe1 and code <= 0xffee then
+		return false                    -- Shift, Control ... alone
+	end
+	if key:ctrl() or key:alt() or key:super() then
+		return true
+	end
+	return not (code < 0x80 and string.char(code):match("%a"))
+end
+
 function P.func(key, env)
 	local ctx = env.engine.context
-	if not env.enabled or key:release() or not showing(ctx) then
+	if not env.enabled or key:release() then
+		return kNoop
+	end
+	if not showing(ctx) then
+		if ctx.composition:empty() and reaches_app(key) then
+			ctx:set_property("mixed_before", "")
+		end
 		return kNoop
 	end
 	local name = key:repr()
@@ -143,6 +304,7 @@ function P.func(key, env)
 	if name == "space" or name == "Return" then
 		env.key = nil
 		ctx:clear()
+		ctx:set_property("mixed_before", "")
 		return kRejected                -- let the app have the key
 	end
 	return kNoop

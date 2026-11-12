@@ -14,7 +14,7 @@ Usage: $(basename "$0") [command]
   test [keys ...]  Run rime_test: interactive without keys, else one
                    key sequence per argument (default)
   shell            Interactive bash inside the container
-  reset-learning   Delete the learned user dictionaries (*.userdb)
+  reset-learning   Delete what was learned (*.userdb, mixed_predict.user.txt)
 
 Environment:
   RIME_DIR   Rime user data folder mounted at /rime
@@ -42,6 +42,6 @@ case "$cmd" in
   build)          docker build -t "$IMAGE_NAME" "$SCRIPT_DIR" ;;
   test)           run_container "$IMAGE_NAME" "$@" ;;
   shell)          run_container --entrypoint bash "$IMAGE_NAME" ;;
-  reset-learning) rm -rf "${RIME_DIR}"/*.userdb && echo "learning reset" ;;
+  reset-learning) rm -rf "${RIME_DIR}"/*.userdb "${RIME_DIR}"/mixed_predict.user.txt && echo "learning reset" ;;
   *)              echo "Unknown command: $cmd"; usage; exit 1 ;;
 esac
