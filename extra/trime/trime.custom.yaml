@@ -9,10 +9,95 @@
 # together (Trime 3.3 has one size for both). Keys are 60 high, not 55,
 # to fit three rows of text. Long press , . types ， 。.
 #
+# A row of digits 1-0 sits above the letters (in Chinese mode they pick
+# candidates, as on a physical keyboard), so the q-p row has no swipe-up
+# digits. The digit row is lower (45), and the keyboard taller (297, Trime's
+# default 250) so the letter rows keep their size. The layout without the
+# digit row is kept below as mixed_quick_letters.
+#
+# The candidate bar is larger than Trime's default (28 high, text 22) for
+# easier tapping; padding widens each candidate's tap area.
+#
 # Copy into the Trime user folder next to the schema, then
-# Profile -> Sync user data. Replaces any trime.custom.yaml you have.
+# Profile -> Sync user data. Sync alone may not apply a changed yaml:
+# adding or removing a schema in Schemata forces a real deploy.
+# Replaces any trime.custom.yaml you have. Only for the default theme
+# (trime); another theme needs these in its own .custom.yaml.
 patch:
+  style/candidate_view_height: 40
+  style/candidate_text_size: 28
+  style/candidate_padding: 3
+  style/comment_text_size: 12
   preset_keyboards/mixed_quick:
+      name: 混合速成
+      author: "kaevinlaw <kaevinlaw@gmail.com>"
+      ascii_mode: 0
+      columns: 10 #鍵盤列數，超過則自動換行，默認30列
+      width: 10
+      height: 60
+      keyboard_height: 297       # 250 (Trime's) + the digit row, so letter keys keep their size
+      keyboard_height_land: 238  # 200 likewise
+      lock: true
+      key_symbol_offset_x: 0
+      key_symbol_offset_y: 0
+      key_text_offset_x: 0
+      key_text_offset_y: 0
+      key_hint_offset_x: 0
+      key_hint_offset_y: 0
+      key_press_offset_x: 2
+      key_press_offset_y: 2
+      keys:
+      - {click: '1', key_text_size: 18, height: 45}
+      - {click: '2', key_text_size: 18}
+      - {click: '3', key_text_size: 18}
+      - {click: '4', key_text_size: 18}
+      - {click: '5', key_text_size: 18}
+      - {click: '6', key_text_size: 18}
+      - {click: '7', key_text_size: 18}
+      - {click: '8', key_text_size: 18}
+      - {click: '9', key_text_size: 18}
+      - {click: '0', key_text_size: 18}
+      - {click: 'q', label: '手', hint: 'q', key_text_size: 18, symbol_text_size: 18, long_click: '!'}
+      - {click: 'w', label: '田', hint: 'w', key_text_size: 18, symbol_text_size: 18, long_click: '@'}
+      - {click: 'e', label: '水', hint: 'e', key_text_size: 18, symbol_text_size: 18, long_click: '#'}
+      - {click: 'r', label: '口', hint: 'r', key_text_size: 18, symbol_text_size: 18, long_click: '$'}
+      - {click: 't', label: '廿', hint: 't', key_text_size: 18, symbol_text_size: 18, long_click: '%'}
+      - {click: 'y', label: '卜', hint: 'y', key_text_size: 18, symbol_text_size: 18, long_click: '^'}
+      - {click: 'u', label: '山', hint: 'u', key_text_size: 18, symbol_text_size: 18, long_click: '&'}
+      - {click: 'i', label: '戈', hint: 'i', key_text_size: 18, symbol_text_size: 18, long_click: '*'}
+      - {click: 'o', label: '人', hint: 'o', key_text_size: 18, symbol_text_size: 18, long_click: '(){Left}'}
+      - {click: 'p', label: '心', hint: 'p', key_text_size: 18, symbol_text_size: 18, long_click: 'Hide'}
+      - {width: 5}
+      - {click: 'a', label: '日', hint: 'a', key_text_size: 18, symbol_text_size: 18, long_click: select_all, swipe_left: Left, swipe_right: Right, swipe_up: Up, swipe_down: Down}
+      - {click: 's', label: '尸', hint: 's', key_text_size: 18, symbol_text_size: 18, long_click: '~', swipe_left: Home, swipe_right: End, swipe_up: Page_Up, swipe_down: Page_Down}
+      - {click: 'd', label: '木', hint: 'd', key_text_size: 18, symbol_text_size: 18, long_click: '-', swipe_down: '_'}
+      - {click: 'f', label: '火', hint: 'f', key_text_size: 18, symbol_text_size: 18, long_click: '+', swipe_down: '='}
+      - {click: 'g', label: '土', hint: 'g', key_text_size: 18, symbol_text_size: 18, long_click: '\', swipe_down: '|'}
+      - {click: 'h', label: '竹', hint: 'h', key_text_size: 18, symbol_text_size: 18, long_click: '[]{Left}', swipe_left: '[', swipe_right: ']'}
+      - {click: 'j', label: '十', hint: 'j', key_text_size: 18, symbol_text_size: 18, long_click: '{}{Left}', swipe_left: '{', swipe_right: '}'}
+      - {click: 'k', label: '大', hint: 'k', key_text_size: 18, symbol_text_size: 18, long_click: ':'}
+      - {click: 'l', label: '中', hint: 'l', key_text_size: 18, symbol_text_size: 18, long_click: ';'}
+      - {width: 5}
+      - {click: Shift_L, send_bindings: false, width: 15}
+      - {click: 'z', label: '重', hint: 'z', key_text_size: 18, symbol_text_size: 18, long_click: '`'}
+      - {click: 'x', label: '難', hint: 'x', key_text_size: 18, symbol_text_size: 18, long_click: cut}
+      - {click: 'c', label: '金', hint: 'c', key_text_size: 18, symbol_text_size: 18, long_click: copy}
+      - {click: 'v', label: '女', hint: 'v', key_text_size: 18, symbol_text_size: 18, long_click: paste}
+      - {click: 'b', label: '月', hint: 'b', key_text_size: 18, symbol_text_size: 18, long_click: Time, swipe_up: Date}
+      - {click: 'n', label: '弓', hint: 'n', key_text_size: 18, symbol_text_size: 18, long_click: '"'}
+      - {click: 'm', label: '一', hint: 'm', key_text_size: 18, symbol_text_size: 18, long_click: "'"}
+      - {click: BackSpace, swipe_left: Escape, width: 15}
+      - {click: Mode_switch, long_click: Menu, width: 15}
+      - {click: Keyboard_symbols, long_click: Keyboard_number}
+      - {click: ',', long_click: '，'}     # long press: full width
+      - {click: space, width: 30}
+      - {click: '.', long_click: '。'}     # long press: full width
+      - {click: '/', long_click: '?'}
+      - {click: Return, composing: Return1, long_click: CommitComment, width: 15}
+
+  # the previous layout, no digit row: rename it to mixed_quick (and the one
+  # above to anything else) to use it again
+  preset_keyboards/mixed_quick_letters:
       name: 混合速成
       author: "kaevinlaw <kaevinlaw@gmail.com>"
       ascii_mode: 0

@@ -127,10 +127,12 @@ cp extra/trime/trime.custom.yaml rime_android/
    Apps → Trime): the scripts stay loaded until the app restarts.
 
 `trime.custom.yaml` adds a keyboard named after the schema, which Trime uses
-for it: the 26-key qwerty layout where each letter key shows its long-press
-symbol on top, the Cangjie radical in the middle (the letter in English
-mode) and the letter at the bottom; long press `,` `.` for `，` `。`. It
-replaces any `trime.custom.yaml` you already have; merge by hand if so.
+for it: a row of digits 1-0 above the 26-key qwerty layout, where each
+letter key shows its long-press symbol on top, the Cangjie radical in the
+middle (the letter in English mode) and the letter at the bottom; long
+press `,` `.` for `，` `。`. The layout without the digit row is in the same
+file as `mixed_quick_letters`. It replaces any `trime.custom.yaml` you
+already have; merge by hand if so.
 Trime rewrites `default.custom.yaml` when you pick schemas in its settings.
 
 The candidate bar scrolls sideways and takes taps, so `raw` space mode suits
