@@ -7,6 +7,9 @@
  * RimeSimulateKeySequence, so plain letters, digits and {space},
  * {Page_Down}, {BackSpace}, {Escape} ... all work. After each one it prints
  * any committed text, the preedit and the current candidate page.
+ * A single key ("3", ",", "{BackSpace}") is sent with RimeProcessKey
+ * instead, which reports "(not handled: the app gets the key)" when Rime
+ * passes it on; a key sequence cannot tell.
  * Learning (the user dictionary) persists in user_dir between runs.
  */
 #include <stdio.h>
@@ -116,14 +119,46 @@ static void translate_term_keys(const char *in, char *out, size_t size)
 	out[n] = '\0';
 }
 
+/* X11 keysyms of the named keys a test sends alone */
+static const struct { const char *name; int code; } key_names[] = {
+	{ "space", 0x20 }, { "BackSpace", 0xff08 }, { "Tab", 0xff09 },
+	{ "Return", 0xff0d }, { "Escape", 0xff1b }, { "Home", 0xff50 },
+	{ "Left", 0xff51 }, { "Up", 0xff52 }, { "Right", 0xff53 },
+	{ "Down", 0xff54 }, { "Page_Up", 0xff55 }, { "Page_Down", 0xff56 },
+	{ "End", 0xff57 }, { "Delete", 0xffff },
+};
+
+static int keycode_by_name(const char *name)
+{
+	for (size_t i = 0; i < sizeof(key_names) / sizeof(key_names[0]); i++)
+		if (strcmp(key_names[i].name, name) == 0)
+			return key_names[i].code;
+	return -1;
+}
+
 static void feed(RimeSessionId session, const char *line)
 {
 	char keys[4096];
 
 	translate_term_keys(line, keys, sizeof(keys));
 	printf("> %s\n", keys);
-	if (!rime->simulate_key_sequence(session, keys))
+	int code = -1;
+	size_t len = strlen(keys);
+	if (len == 1) {
+		code = (unsigned char)keys[0];
+	} else if (len > 2 && keys[0] == '{' && keys[len - 1] == '}'
+		   && !strchr(keys + 1, '{')) {
+		char name[64];
+		snprintf(name, sizeof(name), "%.*s", (int)(len - 2), keys + 1);
+		code = keycode_by_name(name);
+	}
+	if (code > 0) {
+		if (!rime->process_key(session, code, 0))
+			printf("(not handled: the app gets the key)\n");
+		rime->process_key(session, code, 1 << 30);  /* release */
+	} else if (!rime->simulate_key_sequence(session, keys)) {
 		printf("(keys not handled)\n");
+	}
 	show(session);
 }
 
