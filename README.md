@@ -10,7 +10,8 @@ app's behaviour on a desktop:
 - prefix completion: `bac` also lists `back*`, `background` ... (`~~xx` shows
   the rest of the code)
 - English words give Chinese: `background` → 背景
-- associated phrases after a commit: 我 → 的 人 會 …, chaining 我 → 不 → 能;
+- associated phrases after a commit: 我 → 的 人 會 …; the last few characters
+  count however they were typed, so 我 then 是 also offers 中國人;
   what you write after a character comes first next time (我 們 → 們 first)
 - Cangjie hint: pick a character typed some other way (Quick `hi`,
   Cantonese `ngo`) or from the associated phrases (我 → 想) and the input

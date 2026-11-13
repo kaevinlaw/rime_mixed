@@ -2,15 +2,18 @@
 --
 -- After text is committed, the words that may follow it (mixed_predict.txt,
 -- made by convert.py from phrase_*.ms2) are shown as candidates with no
--- input. Picking one commits it and looks up the longer text, so
--- 我 -> 不 -> 能 offers 忘記你 (key 我不能). If the whole text has no entry,
--- its tail is tried: 我不能 -> 不能 -> 能.
+-- input. The last MAX_KEY Chinese characters committed in a row count,
+-- however each was entered (typed, picked from the suggestions, tapped):
+-- every tail with an entry is looked up, longest first. 我 then 是 offers
+-- 中國人 (key 我是) before 是's own words; 我 不 能 offers 忘記你 (key 我不能).
+-- The same keys that break a learned pair (below) start over.
 --
 -- Learning, as the app's "related words": whenever Chinese is committed
 -- right after Chinese, the pair (last character before, committed word) is
 -- counted, however the word was typed: 我 then 們 counts 我 -> 們. After a
 -- commit, up to LEARNED_SHOWN learned words for its last character come
--- first, most used first (ties: most recent), then the built-in list.
+-- after the longer matches, most used first (ties: most recent), then the
+-- last character's own list.
 -- Pairs not used for EXPIRE_DAYS days are forgotten. Stored in
 -- mixed_predict.user.txt in the user folder (one line per change, compacted
 -- on load); delete it to start over. Not part of Rime's sync.
@@ -45,6 +48,7 @@ local kRejected, kAccepted, kNoop = 0, 1, 2
 local LEARNED_SHOWN = 5                 -- the app's default
 local EXPIRE_DAYS = 30                  -- the app's default: 1 month
 local MAX_WORD = 8                      -- longer commits are not learned
+local MAX_KEY = 3                       -- longest key in mixed_predict.txt
 
 local db                                -- built-in, shared by all sessions
 local cangjie                           -- cangjie[character] = code
@@ -214,19 +218,29 @@ local function learned_words(parent)
 	return words
 end
 
--- Longest tail of text that has an entry: 我不能, 不能, 能.
+-- the last n characters of text
+local function last_chars(text, n)
+	local len = utf8.len(text) or 0
+	if len <= n then
+		return text
+	end
+	return text:sub(utf8.offset(text, len - n + 1))
+end
+
+-- {key, words} for every tail of text (up to MAX_KEY characters) with an
+-- entry, longest first: 我不能, 不能, 能.
 local function lookup(text)
+	local found = {}
+	text = last_chars(text, MAX_KEY)
 	local pos = 1
-	while pos <= #text do
-		local words = db[text:sub(pos)]
-		if words then
-			return text:sub(pos), words
+	while pos and pos <= #text do
+		local key = text:sub(pos)
+		if db[key] then
+			found[#found + 1] = { key, db[key] }
 		end
 		pos = utf8.offset(text, 2, pos)
-		if not pos then
-			break
-		end
 	end
+	return found
 end
 
 local function showing(ctx)
@@ -239,17 +253,15 @@ end
 local function show(env, ctx)
 	local text, hint = env.pending, env.hint
 	env.pending, env.hint = nil, nil
-	env.key = nil
 	if not text or ctx.input ~= "" or not ctx.composition:empty() then
 		return
 	end
-	local tail, mine, key, words
+	local mine, found = {}, {}
 	if env.phrases then
-		tail = han_tail(text)
-		mine = learned_words(tail)
-		key, words = lookup(text)
+		mine = learned_words(han_tail(text))
+		found = lookup(text)
 	end
-	if not key and not (mine and #mine > 0) then
+	if #found == 0 and #mine == 0 then
 		if hint then                    -- the hint alone, no menu
 			local seg = Segment(0, 0)
 			seg.tags = Set({ "prediction", "placeholder", "hint" })
@@ -260,13 +272,24 @@ local function show(env, ctx)
 	end
 	local translation = Translation(function()
 		local seen = {}
-		for _, w in ipairs(mine) do
-			seen[w] = true
-			yield(Candidate("prediction", 0, 0, w, ""))
+		local function give(words)
+			for _, w in ipairs(words) do
+				if not seen[w] then
+					seen[w] = true
+					yield(Candidate("prediction", 0, 0, w, ""))
+				end
+			end
 		end
-		for _, w in ipairs(words or {}) do
-			if not seen[w] then
-				yield(Candidate("prediction", 0, 0, w, ""))
+		-- longer matches, learned words, then the last character's list
+		for _, f in ipairs(found) do
+			if utf8.len(f[1]) > 1 then
+				give(f[2])
+			end
+		end
+		give(mine)
+		for _, f in ipairs(found) do
+			if utf8.len(f[1]) == 1 then
+				give(f[2])
 			end
 		end
 	end)
@@ -277,7 +300,6 @@ local function show(env, ctx)
 	seg.menu = menu
 	seg.prompt = hint or ""
 	ctx.composition:push_back(seg)
-	env.key = key or tail
 end
 
 local P = {}
@@ -317,11 +339,12 @@ function P.init(env)
 			learn(parent, text)
 		end
 		c:set_property("mixed_before", real and text or "")
-		-- a picked suggestion continues the chain: 我 + 不 -> 我不
-		if env.key and showing(c) then
-			env.pending = env.key .. text
+		-- the Chinese committed in a row so far: 我 + 是 -> 我是
+		if real and han_word(text) then
+			env.pending = (parent and env.recent or "") .. text
+			env.recent = last_chars(env.pending, MAX_KEY)
 		else
-			env.pending = text
+			env.pending, env.recent = text, ""
 		end
 	end)
 	-- runs after the engine's own update handler, so the segment survives
@@ -370,13 +393,11 @@ function P.func(key, env)
 	end
 	local name = key:repr()
 	if name == "Escape" or name == "BackSpace" then
-		env.key = nil
 		ctx:clear()
 		return kAccepted
 	end
 	-- space only gets here with mixed/space: first or raw
 	if name == "space" or name == "Return" then
-		env.key = nil
 		ctx:clear()
 		ctx:set_property("mixed_before", "")
 		return kRejected                -- let the app have the key
