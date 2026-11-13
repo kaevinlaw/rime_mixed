@@ -30,10 +30,11 @@
 -- Off with mixed/associated_phrases: false (no learning either).
 --
 -- Cangjie hint: after picking a single character typed with a code other
--- than its Cangjie code (Quick "hi", Cantonese "ngo", a partial "hq"), the
--- input line shows its Cangjie code as radicals: 〔我 竹手戈〕. Codes from
--- mixed_cangjie.txt (cangjie.py, from Unihan). With no associated phrases
--- to show, the hint shows alone; any key dismisses it and then does what it does. Off with
+-- than its Cangjie code (Quick "hi", Cantonese "ngo", a partial "hq"), or
+-- picked from the associated phrases (我 -> 想), the input line shows its
+-- Cangjie code as radicals: 〔我 竹手戈〕. Codes from mixed_cangjie.txt
+-- (cangjie.py, from Unihan). With no associated phrases to show, the hint
+-- shows alone; any key dismisses it and then does what it does. Off with
 -- mixed/cangjie_hint: false.
 --
 -- Same technique as librime-predict: a (0, 0) segment tagged "prediction"
@@ -97,9 +98,10 @@ local function load_cangjie()
 	return t
 end
 
--- 〔我 竹手戈〕 if text is one character typed with another code
+-- 〔我 竹手戈〕 if text is one character typed with another code, or
+-- picked with no code at all (typed "": an associated phrase)
 local function hint_for(text, typed)
-	if utf8.len(text) ~= 1 or not typed:match("^[a-z]+$") then
+	if utf8.len(text) ~= 1 or typed ~= "" and not typed:match("^[a-z]+$") then
 		return nil
 	end
 	local code = cangjie[text]
@@ -306,7 +308,7 @@ function P.init(env)
 		-- the radicals candidate (mixed_radicals.lua) is not a word
 		local cand = c:get_selected_candidate()
 		local real = not (cand and cand.type == "radicals")
-		if env.hints and real and not showing(c) and not c.composition:empty() then
+		if env.hints and real and not c.composition:empty() then
 			local seg = c.composition:back()
 			env.hint = hint_for(text, c.input:sub(seg.start + 1, seg._end))
 		end

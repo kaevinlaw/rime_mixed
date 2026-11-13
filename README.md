@@ -13,8 +13,8 @@ app's behaviour on a desktop:
 - associated phrases after a commit: 我 → 的 人 會 …, chaining 我 → 不 → 能;
   what you write after a character comes first next time (我 們 → 們 first)
 - Cangjie hint: pick a character typed some other way (Quick `hi`,
-  Cantonese `ngo`) and the input line shows its Cangjie code as radicals,
-  〔我 竹手戈〕
+  Cantonese `ngo`) or from the associated phrases (我 → 想) and the input
+  line shows its Cangjie code as radicals, 〔我 竹手戈〕
 - space pages forward and wraps to page 1; pick with 1-9 (or: space commits
   the first candidate, or types the letters as English, see Settings)
 
