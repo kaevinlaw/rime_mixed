@@ -12,6 +12,9 @@ app's behaviour on a desktop:
 - English words give Chinese: `background` → 背景
 - associated phrases after a commit: 我 → 的 人 會 …, chaining 我 → 不 → 能;
   what you write after a character comes first next time (我 們 → 們 first)
+- Cangjie hint: pick a character typed some other way (Quick `hi`,
+  Cantonese `ngo`) and the input line shows its Cangjie code as radicals,
+  〔我 竹手戈〕
 - space pages forward and wraps to page 1; pick with 1-9 (or: space commits
   the first candidate, or types the letters as English, see Settings)
 
@@ -25,6 +28,7 @@ Squirrel (macOS). Needs librime-lua for the last two items (Debian/Ubuntu:
 |-------------|-----------------------------------------------------------|
 | `build.sh`  | assembles `rime/`, the folder you copy to your machine    |
 | `convert.py`| `.ms2` dictionaries → Rime dictionaries                   |
+| `cangjie.py`| Unihan → `prebuilt/mixed_cangjie.txt`, codes for the Cangjie hint |
 | `schema/`   | hand-written: `*.schema.yaml`, `default.custom.yaml`, `lua/` |
 | `prebuilt/` | generated dictionaries, so no source repo is needed; `SOURCE` says which commit |
 | `rime/`     | build output (not tracked)                                |
@@ -64,6 +68,17 @@ some_dir/
 ```
 
 Regenerating needs only Python 3 and takes a few seconds.
+
+The Cangjie hint's codes (`prebuilt/mixed_cangjie.txt`) come from the
+`kCangjie` field of Unicode's
+[Unihan database](https://www.unicode.org/Public/UCD/latest/ucd/Unihan.zip),
+checked against the dictionary (Unihan has Cangjie 3; where the dictionary
+lists the character under a close Cangjie 5 code, that one is used):
+
+```bash
+python3 cangjie.py --unihan Unihan.zip --dict prebuilt/mixed_quick.dict.yaml \
+                   --out prebuilt/mixed_cangjie.txt
+```
 
 ## Install
 
@@ -173,6 +188,9 @@ patch:
   # no suggestions after a commit (and no learning of them)
   mixed/associated_phrases: false
 
+  # no Cangjie code shown after picking a character typed another way
+  mixed/cangjie_hint: false
+
   # the radicals of the typed letters as a candidate ("mm": 一一, "hqi": 竹手戈):
   # its place in the list, 1 = first (default), 2 = second ...; 0 = off
   mixed/radical_candidate: 2
@@ -252,3 +270,8 @@ Apache License 2.0, see [LICENSE](LICENSE).
 The dictionaries in `prebuilt/` are generated from
 [holleeb/Mixed-Chinese-Keyboard-Plus-Dicts](https://github.com/holleeb/Mixed-Chinese-Keyboard-Plus-Dicts),
 also Apache-2.0; `prebuilt/SOURCE` names the commit they came from.
+
+`prebuilt/mixed_cangjie.txt` is derived from the Unicode Character Database
+(Unihan), © Unicode, Inc., under the
+Unicode License v3 ([LICENSE-UNICODE.txt](LICENSE-UNICODE.txt)); its header names
+the Unicode version.

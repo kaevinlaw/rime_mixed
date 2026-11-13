@@ -47,6 +47,7 @@ mixed:
   space: page                   # page: next page, wraps; first: commit the
                                 # first candidate; raw: commit the letters + space
   associated_phrases: true      # suggestions after a commit
+  cangjie_hint: true            # after a character typed by another code: 〔我 竹手戈〕
   radical_candidate: 1          # position of the radicals candidate (hqi: 竹手戈); 0 = off
 
 speller:

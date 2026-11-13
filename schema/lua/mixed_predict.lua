@@ -29,6 +29,13 @@
 --
 -- Off with mixed/associated_phrases: false (no learning either).
 --
+-- Cangjie hint: after picking a single character typed with a code other
+-- than its Cangjie code (Quick "hi", Cantonese "ngo", a partial "hq"), the
+-- input line shows its Cangjie code as radicals: 〔我 竹手戈〕. Codes from
+-- mixed_cangjie.txt (cangjie.py, from Unihan). With no associated phrases
+-- to show, the hint shows alone; any key dismisses it and then does what it does. Off with
+-- mixed/cangjie_hint: false.
+--
 -- Same technique as librime-predict: a (0, 0) segment tagged "prediction"
 -- carrying its own menu, added after the engine has recomposed.
 
@@ -39,6 +46,7 @@ local EXPIRE_DAYS = 30                  -- the app's default: 1 month
 local MAX_WORD = 8                      -- longer commits are not learned
 
 local db                                -- built-in, shared by all sessions
+local cangjie                           -- cangjie[character] = code
 local learned                           -- learned[parent][child] = {count, last}
 local user_path
 
@@ -62,6 +70,43 @@ local function load_db()
 	end
 	f:close()
 	return t
+end
+
+local RADICALS = {
+	a = "日", b = "月", c = "金", d = "木", e = "水", f = "火", g = "土",
+	h = "竹", i = "戈", j = "十", k = "大", l = "中", m = "一", n = "弓",
+	o = "人", p = "心", q = "手", r = "口", s = "尸", t = "廿", u = "山",
+	v = "女", w = "田", x = "難", y = "卜", z = "重",
+}
+
+local function load_cangjie()
+	local t = {}
+	local path = rime_api.get_user_data_dir() .. "/mixed_cangjie.txt"
+	local f = io.open(path, "r")
+	if not f then
+		log.error("mixed_predict: cannot open " .. path)
+		return t
+	end
+	for line in f:lines() do
+		local char, code = line:match("^([^#\t][^\t]*)\t(%a+)$")
+		if char then
+			t[char] = code
+		end
+	end
+	f:close()
+	return t
+end
+
+-- 〔我 竹手戈〕 if text is one character typed with another code
+local function hint_for(text, typed)
+	if utf8.len(text) ~= 1 or not typed:match("^[a-z]+$") then
+		return nil
+	end
+	local code = cangjie[text]
+	if not code or code == typed then
+		return nil
+	end
+	return "〔" .. text .. " " .. (code:gsub(".", RADICALS)) .. "〕"
 end
 
 -- Read the learned pairs (later lines win), drop expired ones and write
@@ -190,16 +235,25 @@ local function showing(ctx)
 end
 
 local function show(env, ctx)
-	local text = env.pending
-	env.pending = nil
+	local text, hint = env.pending, env.hint
+	env.pending, env.hint = nil, nil
 	env.key = nil
 	if not text or ctx.input ~= "" or not ctx.composition:empty() then
 		return
 	end
-	local tail = han_tail(text)
-	local mine = learned_words(tail)
-	local key, words = lookup(text)
-	if not key and #mine == 0 then
+	local tail, mine, key, words
+	if env.phrases then
+		tail = han_tail(text)
+		mine = learned_words(tail)
+		key, words = lookup(text)
+	end
+	if not key and not (mine and #mine > 0) then
+		if hint then                    -- the hint alone, no menu
+			local seg = Segment(0, 0)
+			seg.tags = Set({ "prediction", "placeholder", "hint" })
+			seg.prompt = hint
+			ctx.composition:push_back(seg)
+		end
 		return
 	end
 	local translation = Translation(function()
@@ -219,6 +273,7 @@ local function show(env, ctx)
 	local seg = Segment(0, 0)
 	seg.tags = Set({ "prediction", "placeholder" })
 	seg.menu = menu
+	seg.prompt = hint or ""
 	ctx.composition:push_back(seg)
 	env.key = key or tail
 end
@@ -226,15 +281,21 @@ end
 local P = {}
 
 function P.init(env)
-	env.enabled = env.engine.schema.config:get_bool("mixed/associated_phrases") ~= false
+	local config = env.engine.schema.config
+	env.phrases = config:get_bool("mixed/associated_phrases") ~= false
+	env.hints = config:get_bool("mixed/cangjie_hint") ~= false
+	env.enabled = env.phrases or env.hints
 	if not env.enabled then
 		return
 	end
-	if not db then
+	if env.phrases and not db then
 		db = load_db()
 	end
-	if not learned then
+	if env.phrases and not learned then
 		learned = load_learned()
+	end
+	if env.hints and not cangjie then
+		cangjie = load_cangjie()
 	end
 	local ctx = env.engine.context
 	env.commit_conn = ctx.commit_notifier:connect(function(c)
@@ -245,8 +306,12 @@ function P.init(env)
 		-- the radicals candidate (mixed_radicals.lua) is not a word
 		local cand = c:get_selected_candidate()
 		local real = not (cand and cand.type == "radicals")
+		if env.hints and real and not showing(c) and not c.composition:empty() then
+			local seg = c.composition:back()
+			env.hint = hint_for(text, c.input:sub(seg.start + 1, seg._end))
+		end
 		local parent = han_tail(c:get_property("mixed_before"))
-		if real and parent and han_word(text) then
+		if env.phrases and real and parent and han_word(text) then
 			learn(parent, text)
 		end
 		c:set_property("mixed_before", real and text or "")
@@ -288,7 +353,14 @@ function P.func(key, env)
 	if not env.enabled or key:release() then
 		return kNoop
 	end
-	if not showing(ctx) then
+	local hint_only = showing(ctx) and ctx.composition:back():has_tag("hint")
+	if not showing(ctx) or hint_only then
+		if hint_only then               -- any key dismisses the hint
+			ctx:clear()
+			if key:repr() == "Escape" then
+				return kAccepted        -- and Esc does nothing more
+			end
+		end
 		if ctx.composition:empty() and reaches_app(key) then
 			ctx:set_property("mixed_before", "")
 		end

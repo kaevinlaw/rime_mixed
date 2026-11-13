@@ -112,7 +112,9 @@ function P.func(key, env)
 	if env.mode == "raw" and not ctx:get_option("ascii_mode") then
 		local name = key:repr()
 		if ctx.input == "" and (name == "space" or name == "Return")
-				or ctx.composition:empty() and name:match("^%d$") then
+				or (ctx.composition:empty()
+					or ctx.composition:back():has_tag("hint"))
+				and name:match("^%d$") then
 			env.last_chinese = false    -- it reaches the app as is
 		end                             -- (a digit on associated phrases picks)
 		local ch = punctuation(key)

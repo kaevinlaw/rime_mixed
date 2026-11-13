@@ -107,6 +107,7 @@ if [ "$MODE" = prebuilt ]; then
 else
   need_src
   python3 -I "$HERE/convert.py" --src "$SRC" --out "$OUT"
+  cp "$HERE/prebuilt/mixed_cangjie.txt" "$OUT/"     # from Unihan, see cangjie.py
   echo "dictionaries: regenerated from $SRC"
 fi
 echo "ready: $OUT"
