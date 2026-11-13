@@ -46,6 +46,8 @@ Squirrel (macOS). Needs librime-lua for the last two items (Debian/Ubuntu:
 ./build.sh --update-prebuilt  # refresh prebuilt/ (then commit it)
 ./build.sh --space first      # space commits the first candidate (or --space-commits)
 ./build.sh --space raw        # space types the letters + a space (phones)
+./build.sh --no-digit-select  # digits are typed, never pick a candidate
+./build.sh --android          # --space raw --no-digit-select, for Trime
 ```
 
 `--space` sets `mixed/space` in the built schema; the same can be done after
@@ -112,7 +114,7 @@ Tested with [Trime](https://github.com/osfans/trime) 3.3 (同文輸入法, GPL-3
 F-Droid, GitHub or Play Store), which includes librime-lua.
 
 ```bash
-./build.sh --space raw --out rime_android
+./build.sh --android --out rime_android
 cp extra/trime/trime.custom.yaml rime_android/
 ```
 
@@ -190,6 +192,11 @@ patch:
 
   # no suggestions after a commit (and no learning of them)
   mixed/associated_phrases: false
+
+  # digits never pick: while typing, "abc" + 3 gives "abc3"; on the
+  # suggestions a digit dismisses them and is typed. Pick by tapping (or
+  # space). Default on Android (build.sh --android), for the digit row.
+  mixed/digit_select: false
 
   # no Cangjie code shown after picking a character typed another way
   mixed/cangjie_hint: false

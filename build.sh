@@ -8,10 +8,12 @@ OUT="$HERE/rime"
 MODE=prebuilt
 SRC=""
 SPACE=""
+DIGITS=""
 
 usage() {
   cat <<USAGE
 Usage: $(basename "$0") [--prebuilt | --rebuild | --src DIR] [--out DIR] [--space MODE]
+       $(basename "$0") ... [--no-digit-select | --android]
        $(basename "$0") --update-prebuilt [--src DIR]
 
   --prebuilt         use the dictionaries in prebuilt/ (default)
@@ -26,6 +28,9 @@ Usage: $(basename "$0") [--prebuilt | --rebuild | --src DIR] [--out DIR] [--spac
                        raw    commit the typed letters + a space; pick
                               Chinese with 1-9 or by tapping (phones)
   --space-commits    same as --space first
+  --no-digit-select  digits are typed, never pick (mixed/digit_select: false),
+                     for a touch keyboard with a digit row
+  --android          --space raw --no-digit-select, for Trime
   --update-prebuilt  regenerate prebuilt/ itself (for committing)
 
 The output folder holds everything Rime needs. Copy it into your Rime user
@@ -52,6 +57,8 @@ while [ $# -gt 0 ]; do
     --update-prebuilt) MODE=update ;;
     --space)           SPACE="${2:?--space needs page, first or raw}"; shift ;;
     --space-commits)   SPACE=first ;;
+    --no-digit-select) DIGITS=off ;;
+    --android)         SPACE=raw; DIGITS=off ;;
     -h|--help)         usage; exit 0 ;;
     *)                 usage >&2; exit 2 ;;
   esac
@@ -100,6 +107,12 @@ if [ -n "$SPACE" ]; then
   grep -q "^  space: $SPACE " "$OUT/mixed_quick.schema.yaml" \
     || { echo "could not set mixed/space in $OUT/mixed_quick.schema.yaml" >&2; exit 1; }
   echo "space: $SPACE"
+fi
+if [ "$DIGITS" = off ]; then
+  sed -i "s/^\(  digit_select:\) true /\1 false/" "$OUT/mixed_quick.schema.yaml"
+  grep -q "^  digit_select: false" "$OUT/mixed_quick.schema.yaml" \
+    || { echo "could not set mixed/digit_select in $OUT/mixed_quick.schema.yaml" >&2; exit 1; }
+  echo "digit_select: false"
 fi
 if [ "$MODE" = prebuilt ]; then
   cp "$HERE"/prebuilt/*.dict.yaml "$HERE"/prebuilt/*.txt "$OUT/"

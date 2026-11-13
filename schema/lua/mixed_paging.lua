@@ -20,6 +20,12 @@
 --
 -- With first and raw, space on the associated phrases dismisses them and
 -- types a space (mixed_predict.lua).
+--
+-- mixed/digit_select: false (build.sh --android) stops digits picking, for
+-- a touch keyboard with a digit row: while typing, a digit commits the
+-- typed letters and the digit ("abc" + "3" gives "abc3"); on the associated
+-- phrases or the Cangjie hint it dismisses them and types the digit.
+-- Candidates are then picked by tapping (or space, with page and first).
 
 local kRejected, kAccepted, kNoop = 0, 1, 2
 
@@ -67,6 +73,17 @@ local function ends_chinese(text)
 	end
 end
 
+-- the digit a key types, or nil
+local function digit(key)
+	if key:ctrl() or key:alt() or key:super() then
+		return nil
+	end
+	local code = key.keycode
+	if code >= 0x30 and code <= 0x39 then
+		return string.char(code)
+	end
+end
+
 -- commit_text skips the commit notifier, so tell mixed_predict.lua too
 local function commit(env, text)
 	env.engine:commit_text(text)
@@ -87,6 +104,7 @@ function P.init(env)
 		mode = "page"
 	end
 	env.mode = mode
+	env.digit_select = config:get_bool("mixed/digit_select") ~= false
 	if mode == "raw" then
 		env.last_chinese = false        -- nothing typed yet: ASCII
 		env.commit_conn = env.engine.context.commit_notifier:connect(function(c)
@@ -105,10 +123,27 @@ function P.fini(env)
 end
 
 function P.func(key, env)
-	if env.mode == "first" or key:release() then
+	if key:release() then
 		return kNoop
 	end
 	local ctx = env.engine.context
+	if not env.digit_select and not ctx:get_option("ascii_mode")
+			and not ctx.composition:empty() then
+		local d = digit(key)
+		if d and ctx.input ~= "" then
+			commit(env, ctx.input .. d)     -- letters and the digit
+			ctx:clear()
+			return kAccepted
+		elseif d then
+			ctx:clear()                     -- associated phrases or the hint
+			ctx:set_property("mixed_before", "")
+			env.last_chinese = false
+			return kRejected                -- the app types the digit
+		end
+	end
+	if env.mode == "first" then
+		return kNoop
+	end
 	if env.mode == "raw" and not ctx:get_option("ascii_mode") then
 		local name = key:repr()
 		if ctx.input == "" and (name == "space" or name == "Return")
