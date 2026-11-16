@@ -204,6 +204,19 @@ test/run.sh reset-learning         # forget what was learned (rime/*.userdb,
 Each step prints the commit, the input and the candidate page (`page 2/3:`).
 `RIME_DIR=dir test/run.sh ...` tests another folder.
 
+Regression cases (`test/cases.txt`: key sequences and the candidates or
+learning they must give) run on the same image:
+
+```bash
+test/cases.sh                      # all; about 2 minutes (builds and deploys)
+test/cases.sh --keep fuzzy         # only names matching "fuzzy"; keep
+                                   # test/.work/ so the next run is quicker
+```
+
+Each build variant (`build.sh` options such as `--cangjie-dict open`) gets
+its own folder under `test/.work/`, never `rime/`; learning and settings are
+reset before every case.
+
 ## Keys
 
 | key                  | typing                     | associated phrases          |

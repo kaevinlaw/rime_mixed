@@ -1,0 +1,143 @@
+# Cases for cases.sh (sourced). One tc per case, then its checks; see the
+# header of cases.sh. Candidate lists are as the bench prints them:
+# "page 1/3: 1.竹手戈 2.我 ...". Codes: 我 hqi, 的 hapi, 最 asje, 愛 bbpe,
+# 頂 mnmbc.
+
+## mixed_quick: Quick stays
+
+tc "quick: hi lists Quick characters" mixed_quick -- hi
+has ' 2\.么 3\.的 4\.我 '
+
+tc "quick: no fuzzy" mixed_quick -- hqo
+has '1\.竹手人 2\.失 3\.我搵你'
+
+## radicals candidate
+
+tc "radicals: shown up to 5 letters, gone at 6, back at 5" mixed_quick -- hqiab c '{BackSpace}'
+step 1; has '1\.竹手戈日月'
+step 2; not '竹手戈日月'
+step 3; has '1\.竹手戈日月'
+
+tc "radicals: not for a long English word" mixed_cangjie -- background
+has 'page 1/1: 1\.底 2\.本底 3\.背景 4\.background'
+
+## mixed_cangjie: Mixed without Quick
+
+tc "cangjie: hi keeps only real Cangjie (么 鬼), not Quick" mixed_cangjie -- hi
+has '1\.竹戈 2\.么 3\.鬼 4\.印度'
+not '\.的 '
+
+tc "cangjie: real 2-letter Cangjie kept (明 ab)" mixed_cangjie -- ab
+has '1\.日月 2\.明 3\.🆎'
+
+tc "cangjie: Cantonese kept (你 ni)" mixed_cangjie -- ni
+has '1\.弓戈 2\.夕 3\.你 4\.呢'
+
+tc "cangjie: Cantonese kept (我 ngo)" mixed_cangjie -- ngo
+has '1\.弓土人 2\.我 3\.哦'
+
+## fuzzy Cangjie (default: 2 wrong letters, from 3 letters)
+
+tc "fuzzy: exact first, then one key off (毛 hqu, 失 hqo)" mixed_cangjie -- hqi
+has '1\.竹手戈 2\.我 3\.毛 4\.失 5\.科技感'
+
+tc "fuzzy: typo offers 我 after the exact 失" mixed_cangjie -- hqo
+has '1\.竹手人 2\.失 3\.我 4\.牝 5\.悤 6\.𥯨 7\.我搵你'
+
+tc "fuzzy: no exact character, 我 first" mixed_cangjie -- hwi
+has '1\.竹田戈 2\.我 3\.毛 4\.失 5\.生果冰'
+
+tc "fuzzy: 1 wrong (失 悤 𥯨) before 2 wrong (我 牝 慇)" mixed_cangjie -- hwo
+has '1\.竹田人 2\.失 3\.悤 4\.𥯨 5\.我 6\.牝 7\.慇 8\.好喎'
+
+tc "fuzzy: 2-letter codes not fuzzed by default" mixed_cangjie -- av
+not '明'
+
+tc "fuzzy: off with fuzzy 0" mixed_cangjie --set mixed/fuzzy=0 -- hwo
+has '1\.竹田人 2\.好喎 3\.下鍋'
+
+tc "fuzzy: off with fuzzy false" mixed_cangjie --set mixed/fuzzy=false -- hwo
+has '1\.竹田人 2\.好喎 3\.下鍋'
+
+tc "fuzzy: 1 wrong letter only" mixed_cangjie --set mixed/fuzzy=1 -- hwo
+has '1\.竹田人 2\.失 3\.悤 4\.𥯨 5\.好喎'
+
+tc "fuzzy: fuzzy_min 2, 日女 av finds 明" mixed_cangjie --set mixed/fuzzy_min=2 -- av
+has '1\.日女 2\.艮 3\.明 4\.是以'
+
+tc "fuzzy: fuzzy_min 2, no exact character (ui)" mixed_cangjie --set mixed/fuzzy_min=2 -- ui
+has '1\.山戈 2\.出 3\.艸 4\.屾'
+
+tc "fuzzy: fuzzy_min 2, 明 after an's exact characters (page 2)" mixed_cangjie --set mixed/fuzzy_min=2 -- an '{space}'
+step 1; not '明'
+step 2; has 'page 2/\d+: 1\.明 2\.旦'
+
+tc "fuzzy: fuzzy_min 5 stops hwo" mixed_cangjie --set mixed/fuzzy_min=5 -- hwo
+has '1\.竹田人 2\.好喎'
+
+tc "fuzzy: picking learns the real code (hqi), not the typo" mixed_cangjie -- hwi 2
+has 'commit: 我'
+userdb mixed_cangjie '^我\thqi\t1'
+
+tc "fuzzy: Cangjie hint after a fuzzy pick" mixed_cangjie -- hwi 2
+has 'input:  〔我 竹手戈〕'
+
+## open Cangjie5 dictionary (build.sh --cangjie-dict open)
+
+tc "open: simplified-only left out (门 lis)" mixed_cangjie --build "--cangjie-dict open" -- lis
+has '1\.中戈尸 2\.蚎'
+not '门'
+
+tc "open: --keep-simplified keeps 门" mixed_cangjie --build "--cangjie-dict open --keep-simplified" -- lis
+has '1\.中戈尸 2\.门 3\.蚎'
+
+tc "open: Mixed's order (失 悤 恖 𥯨 before rare)" mixed_cangjie --build "--cangjie-dict open" -- hwo
+has '1\.竹田人 2\.失 3\.悤 4\.恖 5\.𥯨 6\.𠂕'
+
+tc "open: --table-order" mixed_cangjie --build "--cangjie-dict open --table-order" -- hwo
+has '1\.竹田人 2\.悤 3\.失 4\.𠂕 5\.恖'
+
+tc "open: no Cantonese (ngo)" mixed_cangjie --build "--cangjie-dict open" -- ngo
+not '\.我 '
+
+tc "open: mixed_quick unchanged" mixed_quick --build "--cangjie-dict open" -- hi
+has ' 2\.么 3\.的 4\.我 '
+
+## Android build (space raw, digits typed)
+
+tc "android: a digit is typed, not a pick" mixed_cangjie --build "--android" -- hwi 2
+has 'commit: hwi2'
+
+tc "android: space types the letters" mixed_cangjie --build "--android" -- hqo '{space}'
+has 'commit: hqo $'
+
+## associated phrases: learning
+
+tc "learn: 我 then 頂 counts 我→頂, shown first after 我" mixed_quick -- hqi 2 mnmbc 2 '{Return}' hqi 2
+learned "我→頂 1"
+has 'page 1/\d+: 1\.頂 2\.的'
+
+tc "learn: Return between breaks the pair" mixed_quick -- hqi 2 '{Return}' mnmbc 2
+learned ""
+
+tc "learn: Escape between does not break the pair (我→我)" mixed_quick -- hqi 2 '{Escape}' hqi 2
+learned "我→我 1"
+
+tc "learn: 我 的 最 愛 counts only 我→的最愛" mixed_quick -- hqi 2 hapi 2 asje 2 bbpe 2 '{Return}' hqi 2
+learned "我→的最愛 1"
+has 'page 1/\d+: 1\.的最愛 2\.的 3\.人'
+
+tc "learn: 我 的 then stop keeps 我→的" mixed_quick -- hqi 2 hapi 2 '{Return}'
+learned "我→的 1"
+
+tc "learn: earlier learning survives the undo (的→最)" mixed_quick -- hapi 2 asje 2 '{Return}' hqi 2 hapi 2 asje 2 bbpe 2 '{Return}'
+learned "我→的最愛 1 的→最 1"
+
+tc "learn: carrying on after the phrase (我 的 最 愛 人)" mixed_quick -- hqi 2 hapi 2 asje 2 bbpe 2 2 '{Return}'
+learned "我→的最愛 1 愛→人 1"
+
+## associated phrases: lookup
+
+tc "phrases: after 我 的, the 我的 key comes first (最愛)" mixed_quick -- hqi 2 hapi 2
+has 'commit: 的'
+has 'page 1/\d+: 1\.最愛 2\.當'
