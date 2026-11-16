@@ -19,6 +19,26 @@ app's behaviour on a desktop:
 - space pages forward and wraps to page 1; pick with 1-9 (or: space commits
   the first candidate, or types the letters as English, see Settings)
 
+Two schemas, alike in everything above:
+
+| schema | name | dictionary |
+|---|---|---|
+| `mixed_quick` | 混合速成 | the app's Mixed method: Cangjie, Quick, Cantonese initials (`ngo` → 我, `mzycho` → 忙中有錯), English |
+| `mixed_cangjie` | 混合倉頡 | the same without Quick: `hi` no longer lists 的我得…, only characters whose Cangjie code is `hi` (鬼). Adds **fuzzy Cangjie** |
+
+Fuzzy Cangjie, for touch keyboards: a mistyped key, as long as it is a
+neighbour in the same row (`h`: `g` `j`) and not the first letter, still
+finds the character. `hqo` (失) and `hwo` (two keys off) also offer 我
+(`hqi`), after the exact characters and before the words; fewer wrong
+letters first. Picking it teaches Rime 我 under `hqi`, its real
+code, never under the typo; the Cangjie hint shows the real code. Only for
+single characters and Cangjie codes (not Cantonese).
+`mixed/fuzzy` is how many letters may be wrong: 2 by default, up to 4,
+0 = off. Typical extra candidates per typo (p90): 3 with 1, 4 with 2.
+`mixed/fuzzy_min` is how many letters must be typed before it starts: 3 by
+default, 2 to 5. With 2, `an` (日弓) also offers 明 (`ab`); a 2-letter code
+gains at most 7 characters (`on`), median 1.
+
 Works with any Rime frontend: fcitx5-rime, ibus-rime, Weasel (Windows),
 Squirrel (macOS). Needs librime-lua for the last two items (Debian/Ubuntu:
 `librime-plugin-lua`).
@@ -29,6 +49,7 @@ Squirrel (macOS). Needs librime-lua for the last two items (Debian/Ubuntu:
 |-------------|-----------------------------------------------------------|
 | `build.sh`  | assembles `rime/`, the folder you copy to your machine    |
 | `convert.py`| `.ms2` dictionaries → Rime dictionaries                   |
+| `noquick.py`| `mixed_quick.dict.yaml` minus Quick → `mixed_cangjie.dict.yaml` |
 | `cangjie.py`| Unihan → `prebuilt/mixed_cangjie.txt`, codes for the Cangjie hint |
 | `schema/`   | hand-written: `*.schema.yaml`, `default.custom.yaml`, `lua/` |
 | `prebuilt/` | generated dictionaries, so no source repo is needed; `SOURCE` says which commit |
@@ -72,6 +93,17 @@ some_dir/
 
 Regenerating needs only Python 3 and takes a few seconds.
 
+`mixed_cangjie.dict.yaml` is made at every build by `noquick.py`:
+`mixed_quick.dict.yaml` minus the pairs in `prebuilt/quick_codes.txt`.
+That list is every code/character pair of the Quick tables in
+[fcitx5-table-extra](https://github.com/fcitx/fcitx5-table-extra)
+(Quick Classic, Quick3, Quick5; public domain) that is not also a Cangjie
+code there (Cangjie3, Cangjie5), so 明 `ab` and 鬼 `hi` stay. Regenerate it:
+
+```bash
+./build.sh --update-quick ../fcitx5-table-extra/tables
+```
+
 The Cangjie hint's codes (`prebuilt/mixed_cangjie.txt`) come from the
 `kCangjie` field of Unicode's
 [Unihan database](https://www.unicode.org/Public/UCD/latest/ucd/Unihan.zip),
@@ -100,10 +132,12 @@ python3 cangjie.py --unihan Unihan.zip --dict prebuilt/mixed_quick.dict.yaml \
    rsync -av rime/ ~/.local/share/fcitx5/rime/          # local
    rsync -av rime/ host:.local/share/fcitx5/rime/       # another machine
    ```
-   `default.custom.yaml` sets the schema list to just `mixed_quick`; if you
-   already have one, merge it by hand.
+   `default.custom.yaml` sets the schema list to `mixed_quick` and
+   `mixed_cangjie` (switch with Ctrl+` or F4); if you already have one,
+   merge it by hand.
 3. Add Rime as an input method (`fcitx5-configtool`), then **Deploy** from
-   the tray menu. The first deploy compiles 1.4 M entries and can take a minute.
+   the tray menu. The first deploy compiles 2.8 M entries (two dictionaries)
+   and can take a few minutes.
 
 Copying again later only replaces these files. Learned words (`*.userdb`)
 and learned associated phrases (`mixed_predict.user.txt`) are kept.
@@ -133,7 +167,8 @@ for it: a row of digits 1-0 above the 26-key qwerty layout, where each
 letter key shows its long-press symbol on top, the Cangjie radical in the
 middle (the letter in English mode) and the letter at the bottom; long
 press `,` `.` for `，` `。`. The layout without the digit row is in the same
-file as `mixed_quick_letters`. It replaces any `trime.custom.yaml` you
+file as `mixed_quick_letters`. `mixed_cangjie` uses the same keyboard
+(`import_preset`). It replaces any `trime.custom.yaml` you
 already have; merge by hand if so.
 Trime rewrites `default.custom.yaml` when you pick schemas in its settings.
 
@@ -181,7 +216,10 @@ otherwise they type `，` `。` as usual. These come from Rime's `default.yaml`.
 
 Change behaviour with a `mixed_quick.custom.yaml` next to the schema in your
 Rime folder, then Deploy. `build.sh` never writes this file, so it survives
-rebuilds and copies. All keys go under one `patch:`:
+rebuilds and copies. All keys go under one `patch:`. For `mixed_cangjie`
+the file is `mixed_cangjie.custom.yaml` (the schema includes
+`mixed_quick`'s settings, but not its `.custom.yaml`), which also takes
+`mixed/fuzzy: false`:
 
 ```yaml
 # mixed_quick.custom.yaml
@@ -280,6 +318,8 @@ Apache License 2.0, see [LICENSE](LICENSE).
 The dictionaries in `prebuilt/` are generated from
 [holleeb/Mixed-Chinese-Keyboard-Plus-Dicts](https://github.com/holleeb/Mixed-Chinese-Keyboard-Plus-Dicts),
 also Apache-2.0; `prebuilt/SOURCE` names the commit they came from.
+`prebuilt/quick_codes.txt` is derived from the Quick and Cangjie tables of
+fcitx5-table-extra, which are in the public domain.
 
 `prebuilt/mixed_cangjie.txt` is derived from the Unicode Character Database
 (Unihan), © Unicode, Inc., under the

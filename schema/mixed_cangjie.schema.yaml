@@ -1,0 +1,35 @@
+# Rime schema: Mixed Chinese Keyboard Plus without Quick (Cangjie +
+# Cantonese codes + English words), with fuzzy Cangjie: a mistyped
+# neighbouring key still finds the character.
+# Dictionary: mixed_cangjie.dict.yaml, made by ../noquick.py from
+# mixed_quick.dict.yaml (build.sh).
+#
+# Everything else is mixed_quick's (space, digits, associated phrases,
+# hint, radicals): it is included below, so a change there applies here.
+# Settings go in mixed_cangjie.custom.yaml (mixed_quick.custom.yaml does
+# not apply to this schema).
+---
+__include: mixed_quick.schema:/
+# literal, not patched: the deployer reads schema/schema_id before includes
+schema:
+  schema_id: mixed_cangjie
+  name: 混合倉頡
+  version: "0.1"
+  description: |
+    Mixed Chinese Keyboard Plus dictionaries (v2.1) without the Quick
+    codes; mistyped Cangjie keys (not the first) are forgiven.
+  dependencies:
+    - mixed_eng      # builds mixed_eng.dict.yaml for the english translator
+# a list: an explicit __patch stops Rime applying mixed_cangjie.custom.yaml
+# by itself, so it is the last item
+__patch:
+  - translator/dictionary: mixed_cangjie
+    engine/filters/@before 0: lua_filter@*mixed_fuzzy   # lua/mixed_fuzzy.lua
+    # 3-5 letters: the characters whose code differs by neighbouring keys
+    # (hqo or hwo: 我 of hqi) come after the exact characters. The number is
+    # how many letters may be wrong: 1-4 (the first is always taken as
+    # typed); 0: off. More finds more, and lists more unrelated characters.
+    mixed/fuzzy: 2
+    # the fewest letters typed before fuzzy starts: 2-5 (2: 日弓 an finds 明 ab)
+    mixed/fuzzy_min: 3
+  - mixed_cangjie.custom:/patch?

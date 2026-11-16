@@ -95,6 +95,10 @@ patch:
       - {click: '/', long_click: '?'}
       - {click: Return, composing: Return1, long_click: CommitComment, width: 15}
 
+  # the mixed_cangjie schema uses the same keyboard
+  preset_keyboards/mixed_cangjie:
+      import_preset: mixed_quick
+
   # the previous layout, no digit row: rename it to mixed_quick (and the one
   # above to anything else) to use it again
   preset_keyboards/mixed_quick_letters:
