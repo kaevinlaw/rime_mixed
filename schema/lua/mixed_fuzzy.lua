@@ -6,6 +6,8 @@
 -- corrector. The first letter is taken as typed. Single characters only,
 -- never words, and only by their Cangjie code (mixed_cangjie.txt, as for
 -- the Cangjie hint): a Cantonese code a key away (ngo, ngi) is not offered.
+-- With mixed/dictionary: open (build.sh --cangjie-dict open) every code in
+-- the dictionary is a Cangjie code, so the dictionary's own codes are used.
 --
 -- Picking one learns it under its real code: 我 picked from "hqo" ranks
 -- higher for "hqi", nothing is written under "hqo" (the candidate is the
@@ -98,7 +100,7 @@ local function fuzzy(env, code, seg, skip)
 	for _, codes in ipairs(variants(code, env.max)) do   -- 1 wrong, 2 wrong ...
 		local learned, plain = {}, {}
 		local function add(list, entry, user, v)
-			if single(entry.text) and cangjie[entry.text] == v
+			if single(entry.text) and (env.open or cangjie[entry.text] == v)
 					and not skip[entry.text] and not seen[entry.text] then
 				seen[entry.text] = true
 				list[#list + 1] = { entry = entry, user = user }
@@ -144,7 +146,10 @@ function F.init(env)
 	env.on = env.max > 0
 	if env.on then
 		env.mem = Memory(env.engine, env.engine.schema)   -- translator's dictionary
-		cangjie = cangjie or load_cangjie()
+		env.open = config:get_string("mixed/dictionary") == "open"
+		if not env.open then
+			cangjie = cangjie or load_cangjie()
+		end
 	end
 end
 

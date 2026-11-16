@@ -101,8 +101,19 @@ That list is every code/character pair of the Quick tables in
 code there (Cangjie3, Cangjie5), so 明 `ab` and 鬼 `hi` stay. Regenerate it:
 
 ```bash
-./build.sh --update-quick ../fcitx5-table-extra/tables
+./build.sh --update-quick ../fcitx5-table-extra/tables --unihan ../unihan/Unihan.zip
 ```
+
+`--cangjie-dict open` gives `mixed_cangjie` a pure Cangjie dictionary
+instead: fcitx5-table-extra's Cangjie5 table (`prebuilt/open_cangjie.txt`,
+written by the same command), single characters only, no words, Cantonese
+or English-to-Chinese. Characters rank by how common the Mixed dictionary
+has them (characters Mixed lacks come last); `--table-order` keeps the
+table's own order instead, which is within each code only, so rare
+characters mix with common ones (fuzzy `hwo` puts 我 on page 2).
+Simplified-only characters (门, 处; 2,674 of 68,576) are left out unless
+`--keep-simplified`: Unihan's `kTraditionalVariant` names other characters
+but not the character itself.
 
 The Cangjie hint's codes (`prebuilt/mixed_cangjie.txt`) come from the
 `kCangjie` field of Unicode's
@@ -318,8 +329,9 @@ Apache License 2.0, see [LICENSE](LICENSE).
 The dictionaries in `prebuilt/` are generated from
 [holleeb/Mixed-Chinese-Keyboard-Plus-Dicts](https://github.com/holleeb/Mixed-Chinese-Keyboard-Plus-Dicts),
 also Apache-2.0; `prebuilt/SOURCE` names the commit they came from.
-`prebuilt/quick_codes.txt` is derived from the Quick and Cangjie tables of
-fcitx5-table-extra, which are in the public domain.
+`prebuilt/quick_codes.txt` and `prebuilt/open_cangjie.txt` are derived from
+the Quick and Cangjie tables of fcitx5-table-extra, which are in the public
+domain; the simplified-only marks in `open_cangjie.txt` come from Unihan.
 
 `prebuilt/mixed_cangjie.txt` is derived from the Unicode Character Database
 (Unihan), © Unicode, Inc., under the

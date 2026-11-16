@@ -32,4 +32,8 @@ __patch:
     mixed/fuzzy: 2
     # the fewest letters typed before fuzzy starts: 2-5 (2: 日弓 an finds 明 ab)
     mixed/fuzzy_min: 3
+    # which dictionary build.sh wrote as mixed_cangjie.dict.yaml: mixed (the
+    # Mixed one without Quick) or open (fcitx5-table-extra's Cangjie5 only;
+    # build.sh --cangjie-dict open). Set by build.sh, not by hand.
+    mixed/dictionary: mixed
   - mixed_cangjie.custom:/patch?

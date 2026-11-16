@@ -9,13 +9,17 @@ MODE=prebuilt
 SRC=""
 SPACE=""
 DIGITS=""
+CJ_DICT=mixed
+KEEP_SIMP=""
+ORDER=mixed
+UNIHAN="$HERE/../unihan/Unihan.zip"
 
 usage() {
   cat <<USAGE
 Usage: $(basename "$0") [--prebuilt | --rebuild | --src DIR] [--out DIR] [--space MODE]
-       $(basename "$0") ... [--no-digit-select | --android]
+       $(basename "$0") ... [--no-digit-select | --android] [--cangjie-dict mixed|open [--keep-simplified] [--table-order]]
        $(basename "$0") --update-prebuilt [--src DIR]
-       $(basename "$0") --update-quick DIR
+       $(basename "$0") --update-quick DIR [--unihan Unihan.zip]
 
   --prebuilt         use the dictionaries in prebuilt/ (default)
   --rebuild          regenerate them from $(basename "$(dirname "$DEFAULT_SRC")")/$(basename "$DEFAULT_SRC")
@@ -32,9 +36,21 @@ Usage: $(basename "$0") [--prebuilt | --rebuild | --src DIR] [--out DIR] [--spac
   --no-digit-select  digits are typed, never pick (mixed/digit_select: false),
                      for a touch keyboard with a digit row
   --android          --space raw --no-digit-select, for Trime
+  --cangjie-dict D   the mixed_cangjie schema's dictionary:
+                       mixed  the Mixed dictionary without Quick (default)
+                       open   fcitx5-table-extra's Cangjie5 only: single
+                              characters, no words, Cantonese or English
+  --keep-simplified  with open: keep the simplified-only characters (门,
+                     处); left out by default
+  --table-order      with open: the table's own order (within a code only:
+                     common and rare characters mix); by default characters
+                     rank by how common the Mixed dictionary has them
   --update-prebuilt  regenerate prebuilt/ itself (for committing)
-  --update-quick DIR regenerate prebuilt/quick_codes.txt from DIR, the tables/
-                     folder of https://github.com/fcitx/fcitx5-table-extra
+  --update-quick DIR regenerate prebuilt/quick_codes.txt and open_cangjie.txt
+                     from DIR, the tables/ folder of
+                     https://github.com/fcitx/fcitx5-table-extra; --unihan:
+                     Unihan.zip, to mark simplified-only characters (default
+                     ../unihan/Unihan.zip)
 
 The output folder holds everything Rime needs. Copy it into your Rime user
 folder, then Deploy:
@@ -56,6 +72,10 @@ while [ $# -gt 0 ]; do
     --prebuilt)        MODE=prebuilt ;;
     --rebuild)         MODE=rebuild; SRC="${SRC:-$DEFAULT_SRC}" ;;
     --src)             MODE=${MODE/prebuilt/rebuild}; SRC="${2:?--src needs a folder}"; shift ;;
+    --cangjie-dict)    CJ_DICT="${2:?--cangjie-dict needs mixed or open}"; shift ;;
+    --keep-simplified) KEEP_SIMP=--keep-simplified ;;
+    --table-order)     ORDER=table ;;
+    --unihan)          UNIHAN="${2:?--unihan needs Unihan.zip}"; shift ;;
     --update-quick)    MODE=quick; TABLES="${2:?--update-quick needs a folder}"; shift ;;
     --out)             OUT="${2:?--out needs a folder}"; shift ;;
     --update-prebuilt) MODE=update ;;
@@ -69,6 +89,10 @@ while [ $# -gt 0 ]; do
   shift
 done
 SRC="${SRC:-$DEFAULT_SRC}"
+case "$CJ_DICT" in
+  mixed|open) ;;
+  *) echo "--cangjie-dict: mixed or open, not '$CJ_DICT'" >&2; exit 2 ;;
+esac
 case "$SPACE" in
   ""|page|first|raw) ;;
   *) echo "--space: page, first or raw, not '$SPACE'" >&2; exit 2 ;;
@@ -97,7 +121,8 @@ EOF
 }
 
 if [ "$MODE" = quick ]; then
-  python3 -I "$HERE/noquick.py" --tables "$TABLES" --write-codes "$HERE/prebuilt/quick_codes.txt"
+  python3 -I "$HERE/noquick.py" --tables "$TABLES" --write-codes "$HERE/prebuilt/quick_codes.txt" \
+    --write-cangjie "$HERE/prebuilt/open_cangjie.txt" --unihan "$UNIHAN"
   exit 0
 fi
 
@@ -132,7 +157,17 @@ else
   cp "$HERE/prebuilt/mixed_cangjie.txt" "$OUT/"     # from Unihan, see cangjie.py
   echo "dictionaries: regenerated from $SRC"
 fi
-# mixed_cangjie: the same dictionary without the Quick codes
-python3 -I "$HERE/noquick.py" --codes "$HERE/prebuilt/quick_codes.txt" \
-  --dict "$OUT/mixed_quick.dict.yaml" --out "$OUT/mixed_cangjie.dict.yaml"
+if [ "$CJ_DICT" = open ]; then
+  # mixed_cangjie: Cangjie5 only
+  python3 -I "$HERE/noquick.py" --open "$HERE/prebuilt/open_cangjie.txt" \
+    --out "$OUT/mixed_cangjie.dict.yaml" $KEEP_SIMP \
+    $([ "$ORDER" = mixed ] && echo --mixed-order "$OUT/mixed_quick.dict.yaml")
+  sed -i "s/^\(    mixed\/dictionary:\) mixed$/\1 open/" "$OUT/mixed_cangjie.schema.yaml"
+  grep -q "^    mixed/dictionary: open$" "$OUT/mixed_cangjie.schema.yaml" \
+    || { echo "could not set mixed/dictionary in $OUT/mixed_cangjie.schema.yaml" >&2; exit 1; }
+else
+  # mixed_cangjie: the same dictionary without the Quick codes
+  python3 -I "$HERE/noquick.py" --codes "$HERE/prebuilt/quick_codes.txt" \
+    --dict "$OUT/mixed_quick.dict.yaml" --out "$OUT/mixed_cangjie.dict.yaml"
+fi
 echo "ready: $OUT"
