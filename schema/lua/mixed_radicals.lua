@@ -5,6 +5,8 @@
 -- mixed/radical_candidate in the schema (or a .custom.yaml patch) is the
 -- position in the list: 1 = first (default), 2 = second ...; 0 = off.
 -- If there are fewer candidates, it comes last.
+-- Not shown for more than 5 letters (no Cangjie code is longer); deleting
+-- back to 5 or fewer brings it back.
 
 local radicals = {
 	a = "日", b = "月", c = "金", d = "木", e = "水", f = "火", g = "土",
@@ -23,7 +25,7 @@ function F.func(input, env)
 	local ctx = env.engine.context
 	local seg = not ctx.composition:empty() and ctx.composition:back()
 	local code = seg and ctx.input:sub(seg.start + 1, seg._end) or ""
-	if env.pos <= 0 or not code:match("^[a-z]+$") then
+	if env.pos <= 0 or not code:match("^[a-z]+$") or #code > 5 then
 		for cand in input:iter() do
 			yield(cand)
 		end
