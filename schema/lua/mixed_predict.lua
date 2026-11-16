@@ -10,10 +10,18 @@
 --
 -- Learning, as the app's "related words": whenever Chinese is committed
 -- right after Chinese, the pair (last character before, committed word) is
--- counted, however the word was typed: 我 then 們 counts 我 -> 們. After a
--- commit, up to LEARNED_SHOWN learned words for its last character come
--- after the longer matches, most used first (ties: most recent), then the
--- last character's own list.
+-- counted, however the word was typed: 我 then 們 counts 我 -> 們.
+-- A word spread over several commits counts instead when it is one of a
+-- character's own suggestions, looking back over the last MAX_WORD
+-- characters committed in a row; the longest such word wins, and the
+-- counts it covers from this run are undone: 我, 的, 最, 愛 counts only
+-- 我 -> 的最愛 (in 我's list), not 我 -> 的, 的 -> 最, 最 -> 愛. One count
+-- per thing written, as a tokenizer's longest match. Keys are single
+-- characters only (我的 -> 最愛 is already first: multi-character lists are
+-- shown first and are short). After a commit, up to LEARNED_SHOWN learned
+-- words for its last character come after the longer matches, most used
+-- first (ties: most recent, then longest), then the last character's own
+-- list.
 -- Pairs not used for EXPIRE_DAYS days are forgotten. Stored in
 -- mixed_predict.user.txt in the user folder (one line per change, compacted
 -- on load); delete it to start over. Not part of Rime's sync.
@@ -54,6 +62,21 @@ local db                                -- built-in, shared by all sessions
 local cangjie                           -- cangjie[character] = code
 local learned                           -- learned[parent][child] = {count, last}
 local user_path
+
+local db_sets = {}                      -- db_sets[key][word] = true, made on use
+
+-- is word one of key's built-in suggestions?
+local function builtin(key, word)
+	local set = db_sets[key]
+	if not set then
+		set = {}
+		for _, w in ipairs(db[key] or {}) do
+			set[w] = true
+		end
+		db_sets[key] = set
+	end
+	return set[word] == true
+end
 
 local function load_db()
 	local t = {}
@@ -128,7 +151,11 @@ local function load_learned()
 	for line in f:lines() do
 		local parent, child, count, last =
 			line:match("^([^\t]+)\t([^\t]+)\t(%d+)\t(%d+)$")
-		if parent then
+		if parent and tonumber(count) == 0 then   -- undone
+			if t[parent] then
+				t[parent][child] = nil
+			end
+		elseif parent then
 			t[parent] = t[parent] or {}
 			t[parent][child] = { tonumber(count), tonumber(last) }
 		end
@@ -180,15 +207,35 @@ local function han_word(text)
 	return n > 0 and n <= MAX_WORD
 end
 
+local function save(parent, child, count, last)
+	local f = io.open(user_path, "a")
+	if f then
+		f:write(table.concat({ parent, child, count, last }, "\t"), "\n")
+		f:close()
+	end
+end
+
+-- count parent -> child; returns what it was, for unlearn
 local function learn(parent, child)
 	learned[parent] = learned[parent] or {}
 	local e = learned[parent][child] or { 0, 0 }
+	local before = { e[1], e[2] }
 	e[1], e[2] = e[1] + 1, os.time()
 	learned[parent][child] = e
-	local f = io.open(user_path, "a")
-	if f then
-		f:write(table.concat({ parent, child, e[1], e[2] }, "\t"), "\n")
-		f:close()
+	save(parent, child, e[1], e[2])
+	return before
+end
+
+-- put parent -> child back to before (from learn); count 0 deletes it
+local function unlearn(parent, child, before)
+	if before[1] == 0 then
+		if learned[parent] then
+			learned[parent][child] = nil
+		end
+		save(parent, child, 0, 0)
+	else
+		learned[parent][child] = { before[1], before[2] }
+		save(parent, child, before[1], before[2])
 	end
 end
 
@@ -209,7 +256,10 @@ local function learned_words(parent)
 		if a[2] ~= b[2] then
 			return a[2] > b[2]
 		end
-		return a[3] > b[3]
+		if a[3] ~= b[3] then
+			return a[3] > b[3]
+		end
+		return #a[1] > #b[1]            -- learned together: 的最愛 before 的
 	end)
 	local words = {}
 	for i = 1, math.min(#list, LEARNED_SHOWN) do
@@ -322,6 +372,7 @@ function P.init(env)
 		cangjie = load_cangjie()
 	end
 	local ctx = env.engine.context
+	env.run, env.run_len, env.counted = "", 0, {}   -- Chinese committed in a row
 	env.commit_conn = ctx.commit_notifier:connect(function(c)
 		local text = c:get_commit_text()
 		if text == "" then
@@ -336,15 +387,60 @@ function P.init(env)
 		end
 		local parent = han_tail(c:get_property("mixed_before"))
 		if env.phrases and real and parent and han_word(text) then
-			learn(parent, text)
+			-- positions count the characters committed in a row: the parent
+			-- is at run_len, this commit ends at stop
+			local tlen = utf8.len(text)
+			local stop = env.run_len + tlen
+			local run = last_chars(env.run .. text, MAX_WORD + 1)
+			local n = utf8.len(run)
+			-- a suggestion typed over several commits, longest first (start
+			-- before the parent, so it is longer than this commit)
+			local at, char, rest
+			for i = 1, n - tlen - 1 do
+				local c1 = run:sub(utf8.offset(run, i), utf8.offset(run, i + 1) - 1)
+				local r = run:sub(utf8.offset(run, i + 1))
+				if builtin(c1, r) then
+					at, char, rest = stop - n + i, c1, r
+					break
+				end
+			end
+			local rec
+			if at then
+				-- undo what it covers, newest first: 我->的, 的->最, 最->愛
+				for k = #env.counted, 1, -1 do
+					local r = env.counted[k]
+					if r.from >= at then
+						unlearn(r.parent, r.child, r.before)
+						table.remove(env.counted, k)
+					end
+				end
+				rec = { parent = char, child = rest, from = at }
+			else
+				rec = { parent = parent, child = text, from = env.run_len }
+			end
+			rec.before = learn(rec.parent, rec.child)
+			env.counted[#env.counted + 1] = rec
 		end
 		c:set_property("mixed_before", real and text or "")
 		-- the Chinese committed in a row so far: 我 + 是 -> 我是
 		if real and han_word(text) then
 			env.pending = (parent and env.recent or "") .. text
 			env.recent = last_chars(env.pending, MAX_KEY)
+			if not parent then
+				env.run, env.run_len, env.counted = "", 0, {}
+			end
+			env.run = last_chars(env.run .. text, MAX_WORD + 1)
+			env.run_len = env.run_len + utf8.len(text)
+			-- what can no longer be covered need not be kept
+			local first = env.run_len - utf8.len(env.run) + 1
+			for k = #env.counted, 1, -1 do
+				if env.counted[k].from < first then
+					table.remove(env.counted, k)
+				end
+			end
 		else
 			env.pending, env.recent = text, ""
+			env.run, env.run_len, env.counted = "", 0, {}
 		end
 	end)
 	-- runs after the engine's own update handler, so the segment survives
